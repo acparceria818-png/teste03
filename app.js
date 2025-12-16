@@ -346,31 +346,46 @@ function selecionarPerfil(perfil) {
   }
 }
 
-// ================== CONTROLE DE TELAS (SPA) ==================
+// ================== CONTROLE DE TELAS (SPA ÚNICO) ==================
 
 function mostrarTela(id) {
+  console.log('Mostrando tela:', id);
+
   document.querySelectorAll('.tela').forEach(tela => {
     tela.classList.add('hidden');
     tela.classList.remove('ativa');
   });
 
   const alvo = document.getElementById(id);
-  if (alvo) {
-    alvo.classList.remove('hidden');
-    alvo.classList.add('ativa');
+  if (!alvo) {
+    console.error('Tela não encontrada:', id);
+    return;
   }
+
+  alvo.classList.remove('hidden');
+  alvo.classList.add('ativa');
 }
 
-// FUNÇÃO GLOBAL PARA O BOTÃO
-window.irParaPerfil = function () {
-  console.log('Entrar no portal clicado');
+// Botão "Entrar no Portal"
+window.entrarNoPortal = function () {
   mostrarTela('telaEscolhaPerfil');
+};
+
+// Escolha de perfil
+window.selecionarPerfil = function (perfil) {
+  console.log('Perfil selecionado:', perfil);
+  localStorage.setItem('perfil', perfil);
+
+  if (perfil === 'motorista') mostrarTela('tela-motorista-login');
+  if (perfil === 'passageiro') mostrarTela('tela-passageiro');
+  if (perfil === 'admin') mostrarTela('tela-admin-login');
 };
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   mostrarTela('welcome');
 });
+
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
