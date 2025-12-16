@@ -357,16 +357,20 @@ function mostrarTela(id) {
 
 function mostrarTela(id) {
   document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.add('hidden');
     tela.classList.remove('ativa');
   });
 
   const alvo = document.getElementById(id);
-  if (alvo) alvo.classList.add('ativa');
+  if (alvo) {
+    alvo.classList.remove('hidden');
+    alvo.classList.add('ativa');
+  }
 }
 
-// Botão "Entrar no Portal"
+// FUNÇÃO GLOBAL PARA O BOTÃO
 window.irParaPerfil = function () {
-  console.log('Clique em Entrar no Portal');
+  console.log('Entrar no portal clicado');
   mostrarTela('telaEscolhaPerfil');
 };
 
