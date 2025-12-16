@@ -380,6 +380,18 @@ window.confirmarMatriculaMotorista = async function () {
   const input = document.getElementById('matriculaMotorista');
   const matricula = input.value.trim();
 
+  <input 
+  type="text" 
+  id="matriculaMotorista"
+  placeholder="Matrícula ou Nome" 
+  class="input"
+/>
+
+<button class="btn" onclick="confirmarMatriculaMotorista()">
+  Entrar
+</button>
+
+
   if (!matricula) {
     alert('Informe sua matrícula');
     input.focus();
