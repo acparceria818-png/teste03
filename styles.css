@@ -521,3 +521,38 @@ h3.section-title {
 body.dark h3.section-title {
   border-bottom-color: var(--primary-dark);
 }
+.hidden {
+  display: none !important;
+}
+
+/* Layout base das telas */
+.tela {
+  padding: 16px;
+}
+
+/* Cards profissionais */
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.card p {
+  margin-top: 6px;
+  opacity: .75;
+  font-size: .9rem;
+}
