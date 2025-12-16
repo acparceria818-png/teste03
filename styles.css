@@ -556,3 +556,12 @@ body.dark h3.section-title {
   opacity: .75;
   font-size: .9rem;
 }
+
+.tela {
+  display: none;
+}
+
+.tela.ativa {
+  display: block;
+}
+
