@@ -113,6 +113,10 @@ function initPWA() {
   function entrarApp() {
   mostrarTela('tela-escolha');
 }
+
+  function irParaEscolhaPerfil() {
+  mostrarTela('tela-escolha');
+}
   
   // Verificar se já está instalado (em alguns navegadores)
   if (window.matchMedia('(display-mode: standalone)').matches) {
