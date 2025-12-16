@@ -7,18 +7,33 @@
 </head>
 <body>
 
-<h2>🚛 Área do Motorista</h2>
+<header>
+  <h1>🚛 Área do Motorista</h1>
+</header>
 
-<div class="card">
-  <button class="btn">📋 Controle de Veículos</button>
-</div>
+<main class="container">
 
-<div class="card">
-  <button class="btn secondary">📍 Compartilhar Localização</button>
-</div>
+  <div class="card">
+    <button class="btn">📋 Preencher Controle de Veículos</button>
+  </div>
+
+  <div class="card">
+    <button class="btn">🗺️ Selecionar Rota</button>
+  </div>
+
+  <div class="card">
+    <button class="btn secondary">📍 Compartilhar Localização em Tempo Real</button>
+  </div>
+
+</main>
+
+<script src="js/auth.js"></script>
+<script>
+  verificarAcesso('motorista');
+</script>
 
 <script src="js/firebase.js"></script>
 <script src="js/motorista.js"></script>
+
 </body>
 </html>
-
