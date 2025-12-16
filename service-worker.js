@@ -8,7 +8,7 @@ const assets = [
   BASE + 'index.html',
   BASE + 'styles.css',
   BASE + 'app.js',
-  BASE + 'logo.jpg',
+  BASE + 'Logo.jpg',
   BASE + 'avatar.png',
   BASE + 'manifest.json',
   OFFLINE_URL
