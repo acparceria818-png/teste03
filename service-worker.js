@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE = 'ac-transporte-v4';
+const CACHE = 'ac-transporte-v5';
 const BASE = '/teste03/';
 const OFFLINE_URL = BASE + 'offline.html';
 
