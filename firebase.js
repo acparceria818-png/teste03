@@ -9,14 +9,13 @@ import { getFirestore, doc, getDoc } from "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyA5KEaKntt9wPYcy60DutrqvIH34piXsXk",
   authDomain: "transporte-f7aea.firebaseapp.com",
-  databaseURL: "https://transporte-f7aea-default-rtdb.firebaseio.com",
   projectId: "transporte-f7aea",
   storageBucket: "transporte-f7aea.firebasestorage.app",
   messagingSenderId: "551406731008",
   appId: "1:551406731008:web:90855ffcd9ac0ef1d93de5"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+;
 
