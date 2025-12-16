@@ -365,9 +365,10 @@ function mostrarTela(id) {
 }
 
 // Botão "Entrar no Portal"
-function irParaPerfil() {
-  mostrarTela('perfil');
-}
+window.irParaPerfil = function () {
+  console.log('Clique em Entrar no Portal');
+  mostrarTela('telaEscolhaPerfil');
+};
 
 // Clique nos cards
 function selecionarPerfil(perfil) {
