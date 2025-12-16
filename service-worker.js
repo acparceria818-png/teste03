@@ -1,5 +1,5 @@
 // service-worker.js - Versão atualizada
-const CACHE = 'ac-transporte-v8';
+const CACHE = 'ac-transporte-v9';
 const BASE = '/';
 const OFFLINE_URL = BASE + 'offline.html';
 
