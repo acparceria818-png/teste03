@@ -357,6 +357,34 @@ function mostrarTela(id) {
   document.getElementById(id)?.classList.remove('hidden');
 }
 
+// ================== CONTROLE DE TELAS (SPA) ==================
+
+function mostrarTela(id) {
+  document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.remove('ativa');
+  });
+
+  const alvo = document.getElementById(id);
+  if (alvo) alvo.classList.add('ativa');
+}
+
+// Botão "Entrar no Portal"
+function irParaPerfil() {
+  mostrarTela('perfil');
+}
+
+// Clique nos cards
+function selecionarPerfil(perfil) {
+  localStorage.setItem('perfil', perfil);
+  mostrarTela(perfil);
+}
+
+// Tela inicial
+document.addEventListener('DOMContentLoaded', () => {
+  mostrarTela('welcome');
+});
+
+
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
