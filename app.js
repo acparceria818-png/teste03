@@ -129,6 +129,73 @@ function initPWA() {
   }
 }
 
+// ================== INICIAR ROTA ==================
+window.iniciarRota = function (nomeRota) {
+  if (!navigator.geolocation) {
+    alert('Geolocalização não suportada neste navegador.');
+    return;
+  }
+
+  const matricula = localStorage.getItem('motorista_matricula');
+  const nome = localStorage.getItem('motorista_nome');
+
+  if (!matricula) {
+    alert('Motorista não autenticado. Faça login novamente.');
+    mostrarTela('tela-motorista-login');
+    return;
+  }
+
+  if (!confirm(`Deseja iniciar a rota "${nomeRota}"?`)) return;
+
+  // Solicitar localização em tempo real
+  const watchId = navigator.geolocation.watchPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords;
+      console.log(`Localização atual: ${latitude}, ${longitude}`);
+
+      // Enviar para Firebase
+      try {
+        await setDoc(doc(db, 'rotas_em_andamento', matricula), {
+          motorista: nome,
+          matricula: matricula,
+          rota: nomeRota,
+          latitude: latitude,
+          longitude: longitude,
+          timestamp: new Date()
+        });
+        console.log('Localização enviada para o Firebase');
+      } catch (erro) {
+        console.error('Erro ao enviar localização:', erro);
+      }
+    },
+    (erro) => {
+      console.error('Erro ao obter localização:', erro);
+      alert('Não foi possível obter localização. Verifique permissões.');
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000
+    }
+  );
+
+  alert(`Rota "${nomeRota}" iniciada. Localização em tempo real ativada.`);
+
+  // Opcional: guardar watchId para parar depois
+  localStorage.setItem('rota_watchId', watchId);
+};
+
+// ================== PARAR ROTA (opcional) ==================
+window.pararRota = function () {
+  const watchId = localStorage.getItem('rota_watchId');
+  if (watchId) {
+    navigator.geolocation.clearWatch(watchId);
+    localStorage.removeItem('rota_watchId');
+    alert('Rastreamento da rota encerrado.');
+    console.log('Rota finalizada');
+  }
+};
+
 // ========== LISTENERS GERAIS ==========
 function initEventListeners() {
   // Fechar modais com ESC
