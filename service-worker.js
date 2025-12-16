@@ -3,7 +3,7 @@ const CACHE = 'ac-transporte-v2';
 const OFFLINE_URL = 'offline.html';
 
 const assets = [
-  '/',
+  ,
   'index.html',
   'styles.css',
   'app.js',
