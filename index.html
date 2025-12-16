@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Portal de Transporte da AC Parceria e Terraplenagem">
+  <meta name="theme-color" content="#b00000" />
+  <title>AC Parceria - Portal de Transporte</title>
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logo.jpg" type="image/jpg">
+  
+  <!-- CSS externo -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- JS externo -->
+  <script src="app.js" defer></script>
+</head>
+<body>
+
+<header>
+  <img src="logo.jpg" alt="AC Logo" class="logo" />
+  <h1>AC PARCERIA E TERRAPLENAGEM — Portal de Transporte</h1>
+</header>
+
+<div class="top-actions container">
+  <div>
+    <button class="icon-btn" id="installBtn" style="display:none" aria-label="Instalar aplicativo">
+      📥 Instalar
+    </button>
+  </div>
+  <div>
+    <button class="icon-btn" id="darkToggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
+      🌙
+    </button>
+  </div>
+</div>
+
+<main class="container">
+  <!-- TELA DE BOAS VINDAS -->
+  <section id="welcome" class="welcome" aria-labelledby="welcomeTitle">
+    <img src="avatar.png" class="avatar" alt="Avatar AC" />
+    <div>
+      <h2 id="welcomeTitle">Bem-vindo ao Portal de Transporte</h2>
+      <p>Rotas, registro de entrada/saída e avisos oficiais da <strong>AC Parceria e Terraplenagem</strong>.</p>
+      <p class="card" style="margin-top:12px">
+        ⏱️ <strong>Importante:</strong> O formulário de controle de veículo deve ser preenchido <strong>2× ao dia</strong> — ao iniciar a jornada (entrada) e ao finalizar (saída).
+      </p>
+      <button class="btn" onclick="enterApp()" aria-label="Entrar no portal">
+        Entrar no Portal
+      </button>
+    </div>
+  </section>
+
+  <!-- MENU PRINCIPAL -->
+  <section id="mainMenu" style="display:none" aria-label="Menu principal">
+    <h2>Menu</h2>
+    
+    <div class="card">
+      <a class="btn" href="https://forms.gle/UDniKxPqcMKGUhFQA" target="_blank" rel="noopener noreferrer">
+        📋 Preencher Controle de Veículo (Entrada / Saída)
+      </a>
+      <small class="note">Use ao iniciar e ao terminar sua jornada. Obrigatório todos os dias.</small>
+    </div>
+
+    <div class="card">
+      <button class="btn" onclick="openModal('avisosModal')">
+        📢 Avisos & Comunicados
+      </button>
+      <small class="note">Leia sempre antes de iniciar a rota.</small>
+    </div>
+
+    <div class="card">
+      <button class="btn" onclick="openSection('rotasSection')">
+        🗺️ Selecionar Rota
+      </button>
+      <small class="note">Selecione a rota que irá conduzir — ao clicar, abre o Google Maps com navegação.</small>
+    </div>
+
+    <div class="card">
+      <button class="btn secondary" onclick="openModal('ajudaModal')">
+        ❓ Ajuda / Explicação dos Botões
+      </button>
+      <small class="note">Instruções rápidas e contatos de suporte.</small>
+    </div>
+  </section>
+
+  <!-- ROTAS -->
+  <section id="rotasSection" style="display:none" aria-label="Seleção de rotas">
+    <h2>Rotas Disponíveis</h2>
+    <p>Selecione abaixo a rota que você irá conduzir:</p>
+
+    <div class="routes" style="margin-top:12px">
+      <!-- ROTA ADM 01 -->
+      <div class="route-item adm">
+        <div class="route-info">
+          <div style="font-weight:800">🏢 ROTA ADM 01</div>
+          <small style="color:#666">Rota administrativa 01</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=18BCgBpobp1Olzmzy0RnPCUEd7Vnkc5s&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota ADM 01 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- ROTA ADM 02 -->
+      <div class="route-item adm">
+        <div class="route-info">
+          <div style="font-weight:800">🏢 ROTA ADM 02</div>
+          <small style="color:#666">Rota administrativa 02</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1WxbIX8nw0xyGBLMvvi1SF3DRuwmZ5oM&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota ADM 02 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- ROTA 01 -->
+      <div class="route-item operacional">
+        <div class="route-info">
+          <div style="font-weight:800">🚛 ROTA 01</div>
+          <small style="color:#666">Rota operacional 01</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1jCfFxq1ZwecS2IcHy7xGFLLgttsM-RQ&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota 01 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- ROTA 02 -->
+      <div class="route-item operacional">
+        <div class="route-info">
+          <div style="font-weight:800">🚛 ROTA 02</div>
+          <small style="color:#666">Rota operacional 02</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1LCvNJxWBbZ_chpbdn_lk_Dm6NPA194g&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota 02 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- ROTA 03 -->
+      <div class="route-item operacional">
+        <div class="route-info">
+          <div style="font-weight:800">🚛 ROTA 03</div>
+          <small style="color:#666">Rota operacional 03</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1bdwkrClh5AZml0mnDGlOzYcaR4w1BL0&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota 03 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- ROTA 04 -->
+      <div class="route-item operacional">
+        <div class="route-info">
+          <div style="font-weight:800">🚛 ROTA 04</div>
+          <small style="color:#666">Rota operacional 04</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1ejibzdZkhX2QLnP9YgvvHdQpZELFvXo&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota 04 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- ROTA 05 -->
+      <div class="route-item operacional">
+        <div class="route-info">
+          <div style="font-weight:800">🚛 ROTA 05</div>
+          <small style="color:#666">Rota operacional 05</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1L9xjAWFUupMc7eQbqVJz-SNWlYX5SHo&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Rota 05 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- RETORNO OVERLAND - ROTA 01 -->
+      <div class="route-item retorno">
+        <div class="route-info">
+          <div style="font-weight:800">🔄 RETORNO OVERLAND - ROTA 01</div>
+          <small style="color:#666">Rota de retorno Overland 01</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1ClQVIaRLOYYWHU7fvP87r1BVy85a_eg&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Retorno Overland Rota 01 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+
+      <!-- RETORNO OVERLAND - ROTA 02 -->
+      <div class="route-item retorno">
+        <div class="route-info">
+          <div style="font-weight:800">🔄 RETORNO OVERLAND - ROTA 02</div>
+          <small style="color:#666">Rota de retorno Overland 02</small>
+        </div>
+        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1WOIMgeLgV01B8yk7HoX6tazdCHXQnok&usp=sharing" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           aria-label="Abrir Retorno Overland Rota 02 no Google Maps">
+          Abrir Rota
+        </a>
+      </div>
+    </div>
+
+    <div style="margin-top:24px; padding-top: 20px; border-top: 1px solid #eee;">
+      <button class="btn" onclick="backToMenu()">← Voltar ao Menu</button>
+    </div>
+  </section>
+</main>
+
+<!-- MODAIS -->
+<div id="avisosModalBack" class="modal-back" aria-hidden="true" style="display:none">
+  <div class="modal">
+    <button class="close" onclick="closeModal('avisosModalBack')" aria-label="Fechar">✕</button>
+    <h3>Avisos Importantes</h3>
+    <ul>
+      <li>Preencher o Controle de Veículo 2× ao dia (entrada e saída).</li>
+      <li>Mantenha comunicação constante com a gestão em caso de desvios.</li>
+      <li>Relatar imediatamente qualquer avaria ou irregularidade do veículo.</li>
+      <li>Não alterar rota sem autorização do setor de operações.</li>
+      <li>Para rotas de retorno Overland, verificar sempre as condições da via antes de iniciar.</li>
+    </ul>
+    <div style="margin-top:12px">
+      <button class="btn" onclick="closeModal('avisosModalBack')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="ajudaModalBack" class="modal-back" aria-hidden="true" style="display:none">
+  <div class="modal">
+    <button class="close" onclick="closeModal('ajudaModalBack')" aria-label="Fechar">✕</button>
+    <h3>Ajuda & Explicação dos Botões</h3>
+    <p><strong>Preencher Controle de Veículo:</strong> Abre o formulário obrigatório (Google Forms). Preencher na entrada e na saída.</p>
+    <p><strong>Selecionar Rota:</strong> Mostra as rotas publicadas pela gestão; ao clicar em "Abrir no Maps" o Google Maps será aberto com a rota pronta.</p>
+    <p><strong>Rotas Operacionais (🚛):</strong> Rotas principais de transporte.</p>
+    <p><strong>Rotas Administrativas (🏢):</strong> Rotas para deslocamentos administrativos.</p>
+    <p><strong>Rotas de Retorno (🔄):</strong> Rotas específicas para retorno Overland.</p>
+    <p><strong>Avisos:</strong> Comunicados importantes e mudanças operacionais — leia sempre antes de iniciar.</p>
+    <p><strong>Instalar / Adicionar à Tela Inicial:</strong> Permite transformar o site em um app no celular do motorista.</p>
+    <div style="margin-top:12px">
+      <button class="btn" onclick="closeModal('ajudaModalBack')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
