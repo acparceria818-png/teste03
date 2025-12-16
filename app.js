@@ -417,6 +417,14 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('motorista_matricula', matricula);
     localStorage.setItem('motorista_nome', dados.nome);
 
+    // Preencher nome na tela
+setTimeout(() => {
+  const nomeEl = document.getElementById('motoristaNome');
+  if (nomeEl) nomeEl.textContent = dados.nome;
+}, 100);
+
+mostrarTela('tela-motorista');
+
     console.log('Motorista autenticado:', dados.nome);
 
     mostrarTela('tela-motorista'); // ou mainMenu se preferir
