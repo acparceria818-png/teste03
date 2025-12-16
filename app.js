@@ -376,21 +376,15 @@ document.addEventListener('DOMContentLoaded', () => {
   mostrarTela('welcome');
 });
 
-window.confirmarMatriculaMotorista = async function () {
+
+  window.confirmarMatriculaMotorista = async function () {
   const input = document.getElementById('matriculaMotorista');
+  if (!input) {
+    alert('Campo de matrícula não encontrado');
+    return;
+  }
+
   const matricula = input.value.trim();
-
-  <input 
-  type="text" 
-  id="matriculaMotorista"
-  placeholder="Matrícula ou Nome" 
-  class="input"
-/>
-
-<button class="btn" onclick="confirmarMatriculaMotorista()">
-  Entrar
-</button>
-
 
   if (!matricula) {
     alert('Informe sua matrícula');
@@ -425,7 +419,7 @@ window.confirmarMatriculaMotorista = async function () {
 
     console.log('Motorista autenticado:', dados.nome);
 
-    mostrarTela('tela-motorista');
+    mostrarTela('tela-motorista'); // ou mainMenu se preferir
 
   } catch (erro) {
     console.error('Erro Firebase:', erro);
