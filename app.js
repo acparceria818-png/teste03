@@ -1,4 +1,4 @@
-// app.js - Portal AC Transporte (Produção)
+// app.js - AC Transporte Portal (Produção Completa)
 import { db, doc, getDoc, setDoc } from './firebase.js';
 
 // ======================= SPA & NAVEGAÇÃO =======================
@@ -187,6 +187,33 @@ function initPWA() {
   window.addEventListener('appinstalled', () => installBtn.style.display = 'none');
 }
 
+// ======================= PESQUISA E FILTRO DE ROTAS =======================
+function searchRoutes() {
+  const searchTerm = document.getElementById('routeSearch')?.value.toLowerCase();
+  const routeItems = document.querySelectorAll('.route-item');
+  routeItems.forEach(item => {
+    const routeName = item.querySelector('.route-info div')?.textContent.toLowerCase() || '';
+    const routeDesc = item.querySelector('.route-info small')?.textContent.toLowerCase() || '';
+    item.style.display = (!searchTerm || routeName.includes(searchTerm) || routeDesc.includes(searchTerm)) ? 'flex' : 'none';
+  });
+}
+
+function filterRoutes(type) {
+  const routeItems = document.querySelectorAll('.route-item');
+  routeItems.forEach(item => {
+    if (type === 'all') item.style.display = 'flex';
+    else if (type === 'adm' && item.classList.contains('adm')) item.style.display = 'flex';
+    else if (type === 'operacional' && item.classList.contains('operacional')) item.style.display = 'flex';
+    else item.style.display = 'none';
+  });
+}
+
+// ======================= GOOGLE MAPS =======================
+function openMapsWithCoords(query) {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 // ======================= EVENT LISTENERS GERAIS =======================
 function initEventListeners() {
   document.addEventListener('keydown', e => {
@@ -197,6 +224,25 @@ function initEventListeners() {
     modal.addEventListener('click', e => {
       if (e.target === modal) closeModal(modal.id);
     });
+  });
+
+  // Teclas de acesso rápido para botões
+  document.querySelectorAll('[onclick]').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.click();
+      }
+    });
+  });
+}
+
+// ======================= SERVICE WORKER =======================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.error('SW erro:', err));
   });
 }
 
