@@ -327,25 +327,6 @@ function filterRoutes(type) {
   });
 }
 
-let perfilSelecionado = null;
-
-function selecionarPerfil(perfil) {
-  perfilSelecionado = perfil;
-  console.log('Perfil selecionado:', perfil);
-
-  if (perfil === 'motorista') {
-    mostrarTela('tela-motorista-login');
-  }
-
-  if (perfil === 'passageiro') {
-    mostrarTela('tela-passageiro');
-  }
-
-  if (perfil === 'admin') {
-    mostrarTela('tela-admin-login');
-  }
-}
-
 // ================== CONTROLE DE TELAS (SPA ÚNICO) ==================
 
 function mostrarTela(id) {
