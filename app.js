@@ -12,6 +12,36 @@ document.addEventListener('DOMContentLoaded', () => {
   initAccessibility();
 });
 
+import { db, auth, loginEmailSenha, logoutUser, monitorAuth, getDocData, setDocData } from './firebase.js';
+
+// Login de motorista
+async function loginMotorista(email, senha) {
+  try {
+    const user = await loginEmailSenha(email, senha);
+    console.log('Motorista logado:', user.uid);
+    localStorage.setItem('uid', user.uid);
+  } catch (erro) {
+    alert('Login falhou: ' + erro.message);
+  }
+}
+
+// Enviar localização
+async function enviarLocalizacao(matricula, nome, rota, lat, lng) {
+  const uid = localStorage.getItem('uid');
+  if (!uid) return alert('Usuário não autenticado');
+
+  await setDocData('rotas_em_andamento', matricula, {
+    motorista: nome,
+    matricula,
+    rota,
+    latitude: lat,
+    longitude: lng,
+    timestamp: new Date(),
+    uid // importante para regras Firestore
+  });
+}
+
+
 // ========== FUNÇÕES DE TEMA ESCURO ==========
 function initDarkMode() {
   const darkToggle = document.getElementById('darkToggle');
