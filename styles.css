@@ -557,10 +557,9 @@ body.dark h3.section-title {
   font-size: .9rem;
 }
 
-.tela {
+.hidden {
   display: none;
 }
-
 .tela.ativa {
   display: block;
 }
