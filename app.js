@@ -379,11 +379,10 @@ function selecionarPerfil(perfil) {
   mostrarTela(perfil);
 }
 
-// Tela inicial
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
   mostrarTela('welcome');
 });
-
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
