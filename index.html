@@ -173,6 +173,9 @@
            rel="noopener noreferrer"
            aria-label="Abrir Rota ADM 01 no Google Maps">
           Abrir Rota
+          <button class="btn secondary" onclick="iniciarRota('ROTA 01')">
+            ▶️ Iniciar Rota (Compartilhar Localização)
+          </button>
         </a>
       </div>
 
@@ -295,6 +298,41 @@
   </section>
 </main>
 
+let watchId = null;
+
+function iniciarRota(nomeRota) {
+  if (!navigator.geolocation) {
+    alert('Geolocalização não suportada neste dispositivo');
+    return;
+  }
+
+  alert(`Rota iniciada: ${nomeRota}\nLocalização sendo compartilhada`);
+
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      console.log('Localização:', lat, lng);
+
+      // 👉 AQUI você pode:
+      // 1. Enviar para Firebase
+      // 2. Mostrar no mapa
+      // 3. Registrar histórico
+    },
+    (erro) => {
+      alert('Erro ao obter localização');
+      console.error(erro);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000
+    }
+  );
+}
+
+  
 <!-- MODAIS -->
 <div id="avisosModalBack" class="modal-back" aria-hidden="true" style="display:none">
   <div class="modal">
