@@ -516,6 +516,11 @@ function mostrarTelaMenuPrincipal() {
   console.log('Menu principal exibido para o motorista');
 }
 
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.openSection = openSection;
+window.backToMenu = backToMenu;
+
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
