@@ -357,6 +357,21 @@ function mostrarTela(id) {
   document.getElementById(id)?.classList.remove('hidden');
 }
 
+// ================== CONTROLE DE TELAS ==================
+
+// Torna global propositalmente
+window.irParaEscolhaPerfil = function () {
+  console.log('Indo para tela de escolha de perfil');
+
+  // Esconde a tela de boas-vindas
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.style.display = 'none';
+
+  // Mostra a tela de escolha de perfil
+  const perfil = document.getElementById('telaEscolhaPerfil');
+  if (perfil) perfil.style.display = 'block';
+};
+
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
