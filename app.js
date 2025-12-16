@@ -467,7 +467,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-  window.confirmarMatriculaMotorista = async function () {
+  // Confirma matrícula do motorista e faz login
+window.confirmarMatriculaMotorista = async function () {
   const input = document.getElementById('matriculaMotorista');
   if (!input) {
     alert('Campo de matrícula não encontrado');
@@ -483,6 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   try {
+    // Referência ao documento do colaborador
     const ref = doc(db, 'colaboradores', matricula);
     const snap = await getDoc(ref);
 
@@ -503,15 +505,45 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // ✅ Login autorizado
+    // ✅ Login autorizado: salvar dados no localStorage
     localStorage.setItem('motorista_matricula', matricula);
     localStorage.setItem('motorista_nome', dados.nome);
 
     // Preencher nome na tela
-setTimeout(() => {
-  const nomeEl = document.getElementById('motoristaNome');
-  if (nomeEl) nomeEl.textContent = dados.nome;
-}, 100);
+    const nomeEl = document.getElementById('motoristaNome');
+    if (nomeEl) nomeEl.textContent = dados.nome;
+
+    // Mostrar menu principal ou tela do motorista
+    mostrarTelaMenuPrincipal();
+
+    console.log('Motorista autenticado:', dados.nome);
+
+  } catch (erro) {
+    console.error('Erro Firebase:', erro);
+    alert('Erro ao validar matrícula. Verifique sua conexão e tente novamente.');
+  }
+};
+
+// Mostra menu principal para o motorista
+function mostrarTelaMenuPrincipal() {
+  // Esconder todas as telas SPA
+  document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.add('hidden');
+    tela.classList.remove('ativa');
+  });
+
+  // Mostrar menu principal
+  const menu = document.getElementById('mainMenu');
+  if (menu) menu.style.display = 'block';
+
+  // Foco acessível no primeiro botão do menu
+  setTimeout(() => {
+    const firstBtn = menu.querySelector('button, .btn');
+    if (firstBtn) firstBtn.focus();
+  }, 100);
+
+  console.log('Menu principal exibido para o motorista');
+}
 
 mostrarTelaMenuPrincipal();
 
