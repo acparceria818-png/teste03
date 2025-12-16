@@ -74,6 +74,46 @@
   </div>
 </section>
 
+  <!-- TELA: LOGIN MOTORISTA -->
+<section id="tela-motorista-login" class="tela hidden">
+  <h2>🚛 Login do Motorista</h2>
+  <p>Informe seus dados para continuar.</p>
+
+  <div class="card">
+    <input type="text" placeholder="Matrícula ou Nome" class="input" />
+    <button class="btn">Entrar</button>
+  </div>
+
+  <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
+    ← Voltar
+  </button>
+</section>
+
+<!-- TELA: PASSAGEIRO -->
+<section id="tela-passageiro" class="tela hidden">
+  <h2>🧍 Passageiro</h2>
+  <p>Acompanhe sua rota.</p>
+
+  <button class="btn" onclick="mostrarTela('mainMenu')">
+    Ir para o Menu
+  </button>
+</section>
+
+<!-- TELA: ADMIN -->
+<section id="tela-admin-login" class="tela hidden">
+  <h2>🛠️ Administrador</h2>
+  <p>Acesso restrito.</p>
+
+  <div class="card">
+    <input type="password" placeholder="Senha" class="input" />
+    <button class="btn">Entrar</button>
+  </div>
+
+  <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
+    ← Voltar
+  </button>
+</section>
+
   <!-- MENU PRINCIPAL -->
   <section id="mainMenu" style="display:none" aria-label="Menu principal">
     <h2>Menu</h2>
