@@ -109,6 +109,10 @@ function initPWA() {
     console.log('PWA instalado com sucesso');
     installBtn.style.display = 'none';
   });
+
+  function entrarNoPortal() {
+  mostrarTela('tela-escolha');
+}
   
   // Verificar se já está instalado (em alguns navegadores)
   if (window.matchMedia('(display-mode: standalone)').matches) {
