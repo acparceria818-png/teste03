@@ -1,7 +1,6 @@
 // app.js - CÓDIGO JAVASCRIPT COMPLETO
 // app.js
-
-import { db } from "./firebase.js";
+import { db, doc, setDoc } from "./firebase.js";
 
 import { 
   doc, 
