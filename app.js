@@ -372,6 +372,17 @@ window.irParaEscolhaPerfil = function () {
   if (perfil) perfil.style.display = 'block';
 };
 
+window.irParaPerfil = function (perfil) {
+  localStorage.setItem('perfil', perfil);
+  window.location.href = perfil + '.html';
+};
+
+const perfil = localStorage.getItem('perfil');
+
+if (perfil !== 'motorista') {
+  window.location.href = 'index.html';
+}
+
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
