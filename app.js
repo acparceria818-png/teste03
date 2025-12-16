@@ -110,7 +110,7 @@ function initPWA() {
     installBtn.style.display = 'none';
   });
 
-  function entrarNoPortal() {
+  function entrarApp() {
   mostrarTela('tela-escolha');
 }
   
