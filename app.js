@@ -1,4 +1,13 @@
 // app.js - CÓDIGO JAVASCRIPT COMPLETO
+// app.js
+
+import { db } from "./firebase.js";
+
+import { 
+  doc, 
+  getDoc 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('AC Transporte Portal - Inicializando...');
   
@@ -8,16 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
   initAccessibility();
 });
-
-// Firebase Core
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-
-// Firestore
-import { 
-  getFirestore, 
-  doc, 
-  getDoc 
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // ========== FUNÇÕES DE TEMA ESCURO ==========
 function initDarkMode() {
