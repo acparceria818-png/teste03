@@ -9,6 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initAccessibility();
 });
 
+// Firebase Core
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+
+// Firestore
+import { 
+  getFirestore, 
+  doc, 
+  getDoc 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
 // ========== FUNÇÕES DE TEMA ESCURO ==========
 function initDarkMode() {
   const darkToggle = document.getElementById('darkToggle');
