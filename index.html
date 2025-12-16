@@ -1,4 +1,3 @@
-meu index.html 
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -22,8 +21,12 @@ meu index.html
 <body>
 
 <header>
-  <img src="Logo.jpg" alt="AC Logo" class="logo" />
+  <img src="Logo.jpg" alt="AC Logo" class="logo" loading="lazy" />
   <h1>AC PARCERIA E TERRAPLENAGEM — Portal de Transporte</h1>
+  <div class="user-status" id="userStatus" style="display:none">
+    <span id="userName"></span>
+    <button class="logout-btn" onclick="logout()" title="Sair">🚪</button>
+  </div>
 </header>
 
 <div class="top-actions container">
@@ -36,266 +39,202 @@ meu index.html
     <button class="icon-btn" id="darkToggle" title="Alternar tema" aria-label="Alternar tema claro/escuro">
       🌙
     </button>
+    <span class="connection-status" id="connectionStatus">●</span>
   </div>
 </div>
 
 <main class="container">
 
-<!-- TELA DE BOAS VINDAS -->
-<section id="welcome" class="tela ativa" aria-labelledby="welcomeTitle">
-  <img src="avatar.png" class="avatar" alt="Avatar AC" />
-  <div>
-    <h2 id="welcomeTitle">Bem-vindo ao Portal de Transporte</h2>
-    <p>Rotas, registro de entrada/saída e avisos oficiais da <strong>AC Parceria e Terraplenagem</strong>.</p>
-    <p class="card" style="margin-top:12px">
-      ⏱️ <strong>Importante:</strong> O formulário de controle de veículo deve ser preenchido <strong>2× ao dia</strong> — ao iniciar a jornada (entrada) e ao finalizar (saída).
-    </p>
-    <button class="btn" onclick="entrarNoPortal()">
-      Entrar no Portal
-    </button>
-  </div>
-</section>
-
-  <!-- TELA: ESCOLHA DE PERFIL -->
-<section id="telaEscolhaPerfil" class="tela hidden">
-  <h2>Como você está acessando?</h2>
-
-  <div class="card" onclick="selecionarPerfil('motorista')">
-    <h3>🚛 Motorista</h3>
-    <p>Acesso para condução e compartilhamento de rota</p>
-  </div>
-
-  <div class="card" onclick="selecionarPerfil('passageiro')">
-    <h3>🧍 Passageiro</h3>
-    <p>Acompanhe a rota e a localização do ônibus</p>
-  </div>
-
-  <div class="card" onclick="selecionarPerfil('admin')">
-    <h3>🛠️ Administrador</h3>
-    <p>Gestão, avisos, monitoramento e controle</p>
-  </div>
-</section>
-
-  <!-- TELA: LOGIN MOTORISTA -->
-<section id="tela-motorista-login" class="tela hidden">
-  <h2>🚛 Login do Motorista</h2>
-  <p>Informe seus dados para continuar.</p>
-
-  <div class="card">
-    <input
-      id="matriculaMotorista"
-      type="text"
-      placeholder="Digite sua matrícula"
-      class="input"
-/>
-    <button class="btn" onclick="confirmarMatriculaMotorista()">
-      Entrar
-    </button>
-
-  </div>
-
-  <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
-    ← Voltar
-  </button>
-</section>
-
-<!-- TELA: PASSAGEIRO -->
-<section id="tela-passageiro" class="tela hidden">
-  <h2>🧍 Passageiro</h2>
-  <p>Acompanhe sua rota.</p>
-
-  <button class="btn" onclick="mostrarTela('mainMenu')">
-    Ir para o Menu
-  </button>
-</section>
-
-<!-- TELA: ADMIN -->
-<section id="tela-admin-login" class="tela hidden">
-  <h2>🛠️ Administrador</h2>
-  <p>Acesso restrito.</p>
-
-  <div class="card">
-    <input type="password" placeholder="Senha" class="input" />
-    <button class="btn">Entrar</button>
-  </div>
-
-  <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
-    ← Voltar
-  </button>
-</section>
-
-  <!-- MENU PRINCIPAL -->
-  <section id="mainMenu" style="display:none" aria-label="Menu principal">
-    <h2>Menu</h2>
-    
-    <div class="card">
-      <a class="btn" href="https://forms.gle/UDniKxPqcMKGUhFQA" target="_blank" rel="noopener noreferrer">
-        📋 Preencher Controle de Veículo (Entrada / Saída)
-      </a>
-      <small class="note">Use ao iniciar e ao terminar sua jornada. Obrigatório todos os dias.</small>
-    </div>
-
-    <div class="card">
-      <button class="btn" onclick="openModal('avisosModal')">
-        📢 Avisos & Comunicados
+  <!-- TELA DE BOAS VINDAS -->
+  <section id="welcome" class="tela ativa" aria-labelledby="welcomeTitle">
+    <img src="avatar.png" class="avatar" alt="Avatar AC" loading="lazy" />
+    <div>
+      <h2 id="welcomeTitle">Bem-vindo ao Portal de Transporte</h2>
+      <p>Rotas, registro de entrada/saída e avisos oficiais da <strong>AC Parceria e Terraplenagem</strong>.</p>
+      <p class="card" style="margin-top:12px">
+        ⏱️ <strong>Importante:</strong> O formulário de controle de veículo deve ser preenchido <strong>2× ao dia</strong> — ao iniciar a jornada (entrada) e ao finalizar (saída).
+      </p>
+      <button class="btn" onclick="entrarNoPortal()" id="entrarBtn">
+        Entrar no Portal
       </button>
-      <small class="note">Leia sempre antes de iniciar a rota.</small>
-    </div>
-
-    <div class="card">
-      <button class="btn" onclick="openSection('rotasSection')">
-        🗺️ Selecionar Rota
-      </button>
-      <small class="note">Selecione a rota que irá conduzir — ao clicar, abre o Google Maps com navegação.</small>
-    </div>
-
-    <div class="card">
-      <button class="btn secondary" onclick="openModal('ajudaModal')">
-        ❓ Ajuda / Explicação dos Botões
-      </button>
-      <small class="note">Instruções rápidas e contatos de suporte.</small>
     </div>
   </section>
 
-  <!-- ROTAS -->
-  <section id="rotasSection" style="display:none" aria-label="Seleção de rotas">
+  <!-- TELA: ESCOLHA DE PERFIL -->
+  <section id="telaEscolhaPerfil" class="tela hidden">
+    <h2>Como você está acessando?</h2>
+
+    <div class="card" onclick="selecionarPerfil('motorista')" tabindex="0" role="button" 
+         onkeydown="if(event.key === 'Enter' || event.key === ' ') selecionarPerfil('motorista')">
+      <h3>🚛 Motorista</h3>
+      <p>Acesso para condução e compartilhamento de rota</p>
+    </div>
+
+    <div class="card" onclick="selecionarPerfil('passageiro')" tabindex="0" role="button"
+         onkeydown="if(event.key === 'Enter' || event.key === ' ') selecionarPerfil('passageiro')">
+      <h3>🧍 Passageiro</h3>
+      <p>Acompanhe a rota e a localização do ônibus</p>
+    </div>
+
+    <div class="card" onclick="selecionarPerfil('admin')" tabindex="0" role="button"
+         onkeydown="if(event.key === 'Enter' || event.key === ' ') selecionarPerfil('admin')">
+      <h3>🛠️ Administrador</h3>
+      <p>Gestão, avisos, monitoramento e controle</p>
+    </div>
+
+    <button class="btn secondary" onclick="mostrarTela('welcome')" style="margin-top:20px">
+      ← Voltar
+    </button>
+  </section>
+
+  <!-- TELA: LOGIN MOTORISTA -->
+  <section id="tela-motorista-login" class="tela hidden">
+    <h2>🚛 Login do Motorista</h2>
+    <p>Informe sua matrícula para continuar.</p>
+
+    <div class="card">
+      <input
+        id="matriculaMotorista"
+        type="text"
+        placeholder="Digite sua matrícula"
+        class="input"
+        aria-label="Matrícula do motorista"
+        maxlength="10"
+        autocomplete="off"
+      />
+      <div class="input-hint">Exemplo: AC1234</div>
+      <button class="btn" onclick="confirmarMatriculaMotorista()" id="loginBtn">
+        Entrar
+      </button>
+    </div>
+
+    <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
+      ← Voltar
+    </button>
+  </section>
+
+  <!-- TELA: MOTORISTA AUTENTICADO -->
+  <section id="tela-motorista" class="tela hidden">
+    <div class="user-header">
+      <h2>Olá, <span id="motoristaNome"></span>!</h2>
+      <small>Matrícula: <span id="motoristaMatricula"></span></small>
+    </div>
+    
+    <div class="card">
+      <p id="rotaStatus">Nenhuma rota ativa</p>
+      <button class="btn secondary" onclick="pararRota()" id="pararRotaBtn" style="display:none">
+        ⏹️ Parar Rota
+      </button>
+    </div>
+
+    <div class="card" onclick="mostrarTela('tela-rotas')" tabindex="0" role="button"
+         onkeydown="if(event.key === 'Enter' || event.key === ' ') mostrarTela('tela-rotas')">
+      <h3>🗺️ Selecionar Rota</h3>
+      <p>Escolha a rota que irá conduzir</p>
+    </div>
+
+    <div class="card" onclick="openModal('avisosModal')" tabindex="0" role="button"
+         onkeydown="if(event.key === 'Enter' || event.key === ' ') openModal('avisosModal')">
+      <h3>📢 Avisos & Comunicados</h3>
+      <p>Informações importantes</p>
+    </div>
+
+    <div class="card">
+      <a class="btn" href="https://forms.gle/UDniKxPqcMKGUhFQA" target="_blank" rel="noopener noreferrer">
+        📋 Controle de Veículo
+      </a>
+      <small class="note">Entrada e saída (obrigatório)</small>
+    </div>
+
+    <button class="btn secondary" onclick="logout()" style="margin-top:20px">
+      🚪 Sair
+    </button>
+  </section>
+
+  <!-- TELA: ROTAS -->
+  <section id="tela-rotas" class="tela hidden">
     <h2>Rotas Disponíveis</h2>
     <p>Selecione abaixo a rota que você irá conduzir:</p>
 
-    <div class="routes" style="margin-top:12px">
-      <!-- ROTA ADM 01 -->
-      <div class="route-item adm">
-        <div class="route-info">
-          <div style="font-weight:800">🏢 ROTA ADM 01</div>
-          <small style="color:#666">Rota administrativa 01</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=18BCgBpobp1Olzmzy0RnPCUEd7Vnkc5s&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Rota ADM 01 no Google Maps">
-          Abrir Rota
-          <button class="btn secondary" onclick="iniciarRota('ROTA 01')">
-            ▶️ Iniciar Rota (Compartilhar Localização)
-          </button>
-        </a>
-      </div>
-
-      <!-- ROTA ADM 02 -->
-      <div class="route-item adm">
-        <div class="route-info">
-          <div style="font-weight:800">🏢 ROTA ADM 02</div>
-          <small style="color:#666">Rota administrativa 02</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1WxbIX8nw0xyGBLMvvi1SF3DRuwmZ5oM&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Rota ADM 02 no Google Maps">
-          Abrir Rota
-        </a>
-      </div>
-
-      <!-- ROTA 01 -->
-      <div class="route-item operacional">
-  <div class="route-info">
-    <div style="font-weight:800">🚛 ROTA 01</div>
-    <small style="color:#666">Rota operacional 01</small>
-  </div>
-  <button class="btn" onclick="iniciarRota('ROTA 01')">
-    ▶️ Iniciar Rota
-  </button>
-  <a class="btn secondary" href="https://www.google.com/maps/d/u/1/edit?mid=1jCfFxq1ZwecS2IcHy7xGFLLgttsM-RQ&usp=sharing" target="_blank" rel="noopener noreferrer">
-    Abrir Rota no Maps
-  </a>
-</div>
-
-      <!-- ROTA 02 -->
-      <div class="route-item operacional">
-        <div class="route-info">
-          <div style="font-weight:800">🚛 ROTA 02</div>
-          <small style="color:#666">Rota operacional 02</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1LCvNJxWBbZ_chpbdn_lk_Dm6NPA194g&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Rota 02 no Google Maps">
-          Abrir Rota
-        </a>
-      </div>
-
-      <!-- ROTA 03 -->
-      <div class="route-item operacional">
-        <div class="route-info">
-          <div style="font-weight:800">🚛 ROTA 03</div>
-          <small style="color:#666">Rota operacional 03</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1bdwkrClh5AZml0mnDGlOzYcaR4w1BL0&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Rota 03 no Google Maps">
-          Abrir Rota
-        </a>
-      </div>
-
-      <!-- ROTA 04 -->
-      <div class="route-item operacional">
-        <div class="route-info">
-          <div style="font-weight:800">🚛 ROTA 04</div>
-          <small style="color:#666">Rota operacional 04</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1ejibzdZkhX2QLnP9YgvvHdQpZELFvXo&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Rota 04 no Google Maps">
-          Abrir Rota
-        </a>
-      </div>
-
-      <!-- ROTA 05 -->
-      <div class="route-item operacional">
-        <div class="route-info">
-          <div style="font-weight:800">🚛 ROTA 05</div>
-          <small style="color:#666">Rota operacional 05</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1L9xjAWFUupMc7eQbqVJz-SNWlYX5SHo&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Rota 05 no Google Maps">
-          Abrir Rota
-        </a>
-      </div>
-
-      <!-- RETORNO OVERLAND - ROTA 01 -->
-      <div class="route-item retorno">
-        <div class="route-info">
-          <div style="font-weight:800">🔄 RETORNO OVERLAND - ROTA 01</div>
-          <small style="color:#666">Rota de retorno Overland 01</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1ClQVIaRLOYYWHU7fvP87r1BVy85a_eg&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Retorno Overland Rota 01 no Google Maps">
-          Abrir Rota
-        </a>
-      </div>
-
-      <!-- RETORNO OVERLAND - ROTA 02 -->
-      <div class="route-item retorno">
-        <div class="route-info">
-          <div style="font-weight:800">🔄 RETORNO OVERLAND - ROTA 02</div>
-          <small style="color:#666">Rota de retorno Overland 02</small>
-        </div>
-        <a class="btn" href="https://www.google.com/maps/d/u/1/edit?mid=1WOIMgeLgV01B8yk7HoX6tazdCHXQnok&usp=sharing" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           aria-label="Abrir Retorno Overland Rota 02 no Google Maps">
-          Abrir Rota
-        </a>
+    <div class="search-filter">
+      <input 
+        type="text" 
+        id="routeSearch" 
+        class="input" 
+        placeholder="Buscar rota..." 
+        oninput="searchRoutes()"
+        aria-label="Buscar rotas"
+      />
+      <div class="filter-buttons">
+        <button class="filter-btn active" onclick="filterRoutes('all')">Todas</button>
+        <button class="filter-btn" onclick="filterRoutes('adm')">ADM</button>
+        <button class="filter-btn" onclick="filterRoutes('operacional')">Operacional</button>
+        <button class="filter-btn" onclick="filterRoutes('retorno')">Retorno</button>
       </div>
     </div>
 
-    <div style="margin-top:24px; padding-top: 20px; border-top: 1px solid #eee;">
-      <button class="btn" onclick="backToMenu()">← Voltar ao Menu</button>
+    <div class="routes" id="routesContainer">
+      <!-- Rotas serão carregadas dinamicamente -->
     </div>
+
+    <button class="btn secondary" onclick="mostrarTela('tela-motorista')" style="margin-top:20px">
+      ← Voltar
+    </button>
+  </section>
+
+  <!-- TELA: PASSAGEIRO -->
+  <section id="tela-passageiro" class="tela hidden">
+    <h2>🧍 Passageiro</h2>
+    <p>Acompanhe sua rota em tempo real.</p>
+    
+    <div class="card">
+      <h3>Rotas Ativas</h3>
+      <div id="rotasAtivasList">
+        <p>Carregando rotas ativas...</p>
+      </div>
+    </div>
+
+    <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
+      ← Voltar
+    </button>
+  </section>
+
+  <!-- TELA: ADMIN -->
+  <section id="tela-admin-login" class="tela hidden">
+    <h2>🛠️ Administrador</h2>
+    <p>Acesso restrito à equipe de gestão.</p>
+
+    <div class="card">
+      <input type="email" id="adminEmail" placeholder="E-mail" class="input" />
+      <input type="password" id="adminSenha" placeholder="Senha" class="input" />
+      <button class="btn" onclick="loginAdmin()">Entrar</button>
+    </div>
+
+    <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
+      ← Voltar
+    </button>
+  </section>
+
+  <!-- TELA: ADMIN DASHBOARD -->
+  <section id="tela-admin-dashboard" class="tela hidden">
+    <h2>Painel de Controle</h2>
+    
+    <div class="card">
+      <h3>🚛 Rotas em Andamento</h3>
+      <div id="adminRotasList">
+        <p>Monitorando rotas...</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📊 Estatísticas</h3>
+      <p>Total de motoristas: <span id="totalMotoristas">0</span></p>
+      <p>Rotas ativas: <span id="rotasAtivasCount">0</span></p>
+    </div>
+
+    <button class="btn secondary" onclick="logout()">
+      🚪 Sair
+    </button>
   </section>
 </main>
   
@@ -333,5 +272,23 @@ meu index.html
     </div>
   </div>
 </div>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none">
+  <div class="loading-spinner"></div>
+  <p id="loadingText">Carregando...</p>
+</div>
+
+<!-- OFFLINE BANNER -->
+<div id="offlineBanner" class="offline-banner" style="display:none">
+  ⚠️ Você está offline. Algumas funcionalidades podem não estar disponíveis.
+</div>
+
+<script>
+  // Funções globais essenciais
+  window.mostrarTelaMenuPrincipal = mostrarTelaMenuPrincipal;
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+</script>
 </body>
 </html>
