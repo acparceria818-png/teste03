@@ -1,377 +1,133 @@
-// app.js - CÓDIGO JAVASCRIPT COMPLETO
-// app.js
-
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('AC Transporte Portal - Inicializando...');
-  
-  // Inicializar todas as funcionalidades
-  initDarkMode();
-  initPWA();
-  initEventListeners();
-  initAccessibility();
-});
-
+// app.js - Portal AC Transporte (Produção)
 import { db, doc, getDoc, setDoc } from './firebase.js';
 
-// Login de motorista
-async function loginMotorista(email, senha) {
+// ======================= SPA & NAVEGAÇÃO =======================
+function mostrarTela(id) {
+  document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.add('hidden');
+    tela.classList.remove('ativa');
+  });
+  const alvo = document.getElementById(id);
+  if (alvo) alvo.classList.remove('hidden');
+  console.log('Tela exibida:', id);
+}
+
+window.entrarNoPortal = () => mostrarTela('telaEscolhaPerfil');
+
+window.selecionarPerfil = (perfil) => {
+  localStorage.setItem('perfil', perfil);
+  if (perfil === 'motorista') mostrarTela('tela-motorista-login');
+  if (perfil === 'passageiro') mostrarTela('tela-passageiro');
+  if (perfil === 'admin') mostrarTela('tela-admin-login');
+};
+
+function mostrarTelaMenuPrincipal() {
+  document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.add('hidden');
+    tela.classList.remove('ativa');
+  });
+  const menu = document.getElementById('mainMenu');
+  if (menu) menu.style.display = 'block';
+  const firstBtn = menu.querySelector('button, .btn');
+  if (firstBtn) firstBtn.focus();
+}
+
+// ======================= LOGIN MOTORISTA =======================
+window.confirmarMatriculaMotorista = async function () {
+  const input = document.getElementById('matriculaMotorista');
+  if (!input) return alert('Campo de matrícula não encontrado');
+
+  const matricula = input.value.trim();
+  if (!matricula) {
+    input.focus();
+    return alert('Informe sua matrícula');
+  }
+
   try {
-    const user = await loginEmailSenha(email, senha);
-    console.log('Motorista logado:', user.uid);
-    localStorage.setItem('uid', user.uid);
+    const ref = doc(db, 'colaboradores', matricula);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return alert('Matrícula não encontrada');
+
+    const dados = snap.data();
+    if (!dados.ativo) return alert('Colaborador inativo');
+    if (dados.perfil !== 'motorista') return alert('Acesso exclusivo para motoristas');
+
+    localStorage.setItem('motorista_matricula', matricula);
+    localStorage.setItem('motorista_nome', dados.nome);
+
+    const nomeEl = document.getElementById('motoristaNome');
+    if (nomeEl) nomeEl.textContent = dados.nome;
+
+    mostrarTelaMenuPrincipal();
+    console.log('Motorista autenticado:', dados.nome);
+
   } catch (erro) {
-    alert('Login falhou: ' + erro.message);
+    console.error('Erro Firebase:', erro);
+    alert('Erro ao validar matrícula');
   }
-}
+};
 
-// Enviar localização
-async function enviarLocalizacao(matricula, nome, rota, lat, lng) {
-  const uid = localStorage.getItem('uid');
-  if (!uid) return alert('Usuário não autenticado');
-
-  await setDocData('rotas_em_andamento', matricula, {
-    motorista: nome,
-    matricula,
-    rota,
-    latitude: lat,
-    longitude: lng,
-    timestamp: new Date(),
-    uid // importante para regras Firestore
-  });
-}
-
-
-// ========== FUNÇÕES DE TEMA ESCURO ==========
-function initDarkMode() {
-  const darkToggle = document.getElementById('darkToggle');
-  if (!darkToggle) return;
-  
-  // Verificar preferência do sistema
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-  
-  // Verificar preferência salva
-  const savedPreference = localStorage.getItem('ac_dark');
-  
-  // Aplicar tema baseado nas preferências
-  if (savedPreference === '1' || (!savedPreference && prefersDark.matches)) {
-    document.body.classList.add('dark');
-    updateDarkModeIcon(true);
-  }
-  
-  // Configurar alternância de tema
-  darkToggle.addEventListener('click', toggleDarkMode);
-  
-  // Ouvir mudanças no sistema
-  prefersDark.addEventListener('change', (e) => {
-    if (!localStorage.getItem('ac_dark')) {
-      if (e.matches) {
-        document.body.classList.add('dark');
-        updateDarkModeIcon(true);
-      } else {
-        document.body.classList.remove('dark');
-        updateDarkModeIcon(false);
-      }
-    }
-  });
-}
-
-function toggleDarkMode() {
-  const isDark = document.body.classList.toggle('dark');
-  localStorage.setItem('ac_dark', isDark ? '1' : '0');
-  updateDarkModeIcon(isDark);
-  
-  // Feedback tátil (opcional)
-  const darkToggle = document.getElementById('darkToggle');
-  darkToggle.style.transform = 'scale(0.95)';
-  setTimeout(() => {
-    darkToggle.style.transform = '';
-  }, 150);
-}
-
-function updateDarkModeIcon(isDark) {
-  const darkToggle = document.getElementById('darkToggle');
-  if (!darkToggle) return;
-  
-  darkToggle.textContent = isDark ? '☀️' : '🌙';
-  darkToggle.setAttribute('title', isDark ? 'Alternar para modo claro' : 'Alternar para modo escuro');
-  darkToggle.setAttribute('aria-label', isDark ? 'Modo escuro ativo - clique para modo claro' : 'Modo claro ativo - clique para modo escuro');
-}
-
-// ========== FUNÇÕES PWA ==========
-function initPWA() {
-  const installBtn = document.getElementById('installBtn');
-  if (!installBtn) return;
-  
-  let deferredPrompt;
-  
-  // Detectar evento de instalação
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = 'flex';
-    
-    console.log('PWA pode ser instalado');
-  });
-  
-  // Clique no botão de instalação
-  installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) {
-      alert('Este aplicativo já está instalado ou não pode ser instalado.');
-      return;
-    }
-    
-    // Mostrar prompt de instalação
-    deferredPrompt.prompt();
-    
-    // Aguardar escolha do usuário
-    const choiceResult = await deferredPrompt.userChoice;
-    
-    if (choiceResult.outcome === 'accepted') {
-      console.log('Usuário aceitou a instalação');
-      installBtn.style.display = 'none';
-    } else {
-      console.log('Usuário recusou a instalação');
-    }
-    
-    deferredPrompt = null;
-  });
-  
-  // Esconder botão se já estiver instalado
-  window.addEventListener('appinstalled', () => {
-    console.log('PWA instalado com sucesso');
-    installBtn.style.display = 'none';
-  });
-
-  function entrarApp() {
-  mostrarTela('tela-escolha');
-}
-  
-  // Verificar se já está instalado (em alguns navegadores)
-  if (window.matchMedia('(display-mode: standalone)').matches) {
-    installBtn.style.display = 'none';
-  }
-}
-
-// ================== INICIAR ROTA ==================
+// ======================= RASTREAMENTO DE ROTA =======================
 window.iniciarRota = function (nomeRota) {
-  if (!navigator.geolocation) {
-    alert('Geolocalização não suportada neste navegador.');
-    return;
-  }
+  if (!navigator.geolocation) return alert('Geolocalização não suportada');
 
   const matricula = localStorage.getItem('motorista_matricula');
   const nome = localStorage.getItem('motorista_nome');
-
-  if (!matricula) {
-    alert('Motorista não autenticado. Faça login novamente.');
-    mostrarTela('tela-motorista-login');
-    return;
-  }
+  if (!matricula) return mostrarTela('tela-motorista-login');
 
   if (!confirm(`Deseja iniciar a rota "${nomeRota}"?`)) return;
 
-  // Solicitar localização em tempo real
   const watchId = navigator.geolocation.watchPosition(
-    async (position) => {
-      const { latitude, longitude } = position.coords;
-      console.log(`Localização atual: ${latitude}, ${longitude}`);
-
-      // Enviar para Firebase
+    async ({ coords }) => {
+      const { latitude, longitude } = coords;
+      console.log(`Localização: ${latitude}, ${longitude}`);
       try {
         await setDoc(doc(db, 'rotas_em_andamento', matricula), {
           motorista: nome,
-          matricula: matricula,
+          matricula,
           rota: nomeRota,
-          latitude: latitude,
-          longitude: longitude,
+          latitude,
+          longitude,
           timestamp: new Date()
         });
-        console.log('Localização enviada para o Firebase');
       } catch (erro) {
         console.error('Erro ao enviar localização:', erro);
       }
     },
-    (erro) => {
-      console.error('Erro ao obter localização:', erro);
-      alert('Não foi possível obter localização. Verifique permissões.');
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 10000
-    }
+    (erro) => alert('Erro ao obter localização: ' + erro.message),
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
   );
 
-  alert(`Rota "${nomeRota}" iniciada. Localização em tempo real ativada.`);
-
-  // Opcional: guardar watchId para parar depois
   localStorage.setItem('rota_watchId', watchId);
+  alert(`Rota "${nomeRota}" iniciada. Localização em tempo real ativada.`);
 };
 
-// ================== PARAR ROTA (opcional) ==================
 window.pararRota = function () {
   const watchId = localStorage.getItem('rota_watchId');
   if (watchId) {
     navigator.geolocation.clearWatch(watchId);
     localStorage.removeItem('rota_watchId');
-    alert('Rastreamento da rota encerrado.');
-    console.log('Rota finalizada');
+    alert('Rastreamento encerrado.');
   }
 };
 
-// ========== LISTENERS GERAIS ==========
-function initEventListeners() {
-  // Fechar modais com ESC
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeAllModals();
-    }
-  });
-  
-  // Fechar modal clicando fora
-  document.querySelectorAll('.modal-back').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal(modal.id);
-      }
-    });
-  });
-  
-  // Adicionar eventos de teclado para botões com onclick
-  document.querySelectorAll('[onclick]').forEach(element => {
-    element.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        element.click();
-      }
-    });
-  });
-  
-  // Prevenir comportamento padrão de links externos
-  document.querySelectorAll('a[href^="http"]').forEach(link => {
-    if (!link.hasAttribute('target')) {
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-    }
-  });
-}
-
-// ========== ACESSIBILIDADE ==========
-function initAccessibility() {
-  // Adicionar roles e labels
-  document.querySelectorAll('.btn').forEach(btn => {
-    if (!btn.getAttribute('aria-label') && btn.textContent) {
-      const label = btn.textContent.trim().replace(/\s+/g, ' ');
-      btn.setAttribute('aria-label', label);
-    }
-    
-    if (!btn.getAttribute('role') && btn.onclick) {
-      btn.setAttribute('role', 'button');
-    }
-  });
-  
-  // Focar no modal quando aberto
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-        const modal = mutation.target;
-        if (modal.style.display === 'flex') {
-          setTimeout(() => {
-            const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            firstFocusable?.focus();
-          }, 100);
-        }
-      }
-    });
-  });
-  
-  document.querySelectorAll('.modal-back').forEach(modal => {
-    observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
-  });
-}
-
-// ========== FUNÇÕES DE NAVEGAÇÃO ==========
-function enterApp() {
-  document.getElementById('welcome').style.display = 'none';
-  document.getElementById('mainMenu').style.display = 'block';
-  
-  // Focar no primeiro elemento do menu para acessibilidade
-  setTimeout(() => {
-    const firstMenuItem = document.querySelector('#mainMenu .btn');
-    firstMenuItem?.focus();
-  }, 100);
-  
-  // Rolar suavemente para o menu
-  document.getElementById('mainMenu').scrollIntoView({ 
-    behavior: 'smooth',
-    block: 'start'
-  });
-  
-  console.log('Usuário entrou no aplicativo');
-}
-
-function openSection(sectionId) {
-  // Esconder todas as seções visíveis
-  document.querySelectorAll('main > section').forEach(section => {
-    if (section.style.display !== 'none') {
-      section.style.display = 'none';
-    }
-  });
-  
-  // Mostrar a seção solicitada
-  const targetSection = document.getElementById(sectionId);
-  if (targetSection) {
-    targetSection.style.display = 'block';
-    
-    // Focar no primeiro elemento da seção
-    setTimeout(() => {
-      const firstElement = targetSection.querySelector('.btn, button, [tabindex="0"]');
-      firstElement?.focus();
-    }, 100);
-    
-    // Rolar para o topo suavemente
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    console.log(`Seção aberta: ${sectionId}`);
-  }
-}
-
-function backToMenu() {
-  document.getElementById('rotasSection').style.display = 'none';
-  document.getElementById('mainMenu').style.display = 'block';
-  
-  // Focar no botão de rotas para facilitar navegação
-  setTimeout(() => {
-    const rotasBtn = document.querySelector('#mainMenu [onclick*="rotasSection"]');
-    rotasBtn?.focus();
-  }, 100);
-  
-  console.log('Voltou ao menu principal');
-}
-
-// ========== FUNÇÕES DE MODAL ==========
+// ======================= MODAIS =======================
 function openModal(modalType) {
   const modalId = modalType === 'avisosModal' ? 'avisosModalBack' : 'ajudaModalBack';
   const modal = document.getElementById(modalId);
-  
   if (modal) {
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden'; // Prevenir scroll do body
-    
-    console.log(`Modal aberto: ${modalType}`);
+    document.body.style.overflow = 'hidden';
   }
 }
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  
   if (modal) {
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = 'auto'; // Restaurar scroll
-    
-    console.log(`Modal fechado: ${modalId}`);
+    document.body.style.overflow = 'auto';
   }
 }
 
@@ -380,212 +136,75 @@ function closeAllModals() {
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
   });
-  
   document.body.style.overflow = 'auto';
-  console.log('Todos os modais fechados');
-}
-
-// ========== FUNÇÕES AUXILIARES ==========
-function openMapsWithCoords(query) {
-  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
-  
-  console.log(`Abrindo mapa para: ${query}`);
-}
-
-// ========== FUNÇÕES ADICIONAIS PARA ROTAS ==========
-function searchRoutes() {
-  const searchTerm = document.getElementById('routeSearch')?.value.toLowerCase();
-  const routeItems = document.querySelectorAll('.route-item');
-  
-  routeItems.forEach(item => {
-    const routeName = item.querySelector('.route-info div').textContent.toLowerCase();
-    const routeDesc = item.querySelector('.route-info small').textContent.toLowerCase();
-    
-    if (routeName.includes(searchTerm) || routeDesc.includes(searchTerm) || !searchTerm) {
-      item.style.display = 'flex';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-}
-
-function filterRoutes(type) {
-  const routeItems = document.querySelectorAll('.route-item');
-  
-  routeItems.forEach(item => {
-    if (type === 'all') {
-      item.style.display = 'flex';
-    } else if (type === 'adm' && item.classList.contains('adm')) {
-      item.style.display = 'flex';
-    } else if (type === 'operacional' && item.classList.contains('operacional')) {
-      item.style.display = 'flex';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-}
-
-// ================== CONTROLE DE TELAS (SPA ÚNICO) ==================
-
-function mostrarTela(id) {
-  console.log('Mostrando tela:', id);
-
-  document.querySelectorAll('.tela').forEach(tela => {
-    tela.classList.add('hidden');
-    tela.classList.remove('ativa');
-  });
-
-  const alvo = document.getElementById(id);
-  if (!alvo) {
-    console.error('Tela não encontrada:', id);
-    return;
-  }
-
-  alvo.classList.remove('hidden');
-  alvo.classList.add('ativa');
-}
-
-// Botão "Entrar no Portal"
-window.entrarNoPortal = function () {
-  mostrarTela('telaEscolhaPerfil');
-};
-
-// Escolha de perfil
-window.selecionarPerfil = function (perfil) {
-  console.log('Perfil selecionado:', perfil);
-  localStorage.setItem('perfil', perfil);
-
-  if (perfil === 'motorista') mostrarTela('tela-motorista-login');
-  if (perfil === 'passageiro') mostrarTela('tela-passageiro');
-  if (perfil === 'admin') mostrarTela('tela-admin-login');
-};
-
-// Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-  mostrarTela('welcome');
-});
-
-
-  // Confirma matrícula do motorista e faz login
-window.confirmarMatriculaMotorista = async function () {
-  const input = document.getElementById('matriculaMotorista');
-  if (!input) {
-    alert('Campo de matrícula não encontrado');
-    return;
-  }
-
-  const matricula = input.value.trim();
-
-  if (!matricula) {
-    alert('Informe sua matrícula');
-    input.focus();
-    return;
-  }
-
-  try {
-    // Referência ao documento do colaborador
-    const ref = doc(db, 'colaboradores', matricula);
-    const snap = await getDoc(ref);
-
-    if (!snap.exists()) {
-      alert('Matrícula não encontrada');
-      return;
-    }
-
-    const dados = snap.data();
-
-    if (!dados.ativo) {
-      alert('Colaborador inativo');
-      return;
-    }
-
-    if (dados.perfil !== 'motorista') {
-      alert('Este acesso é exclusivo para motoristas');
-      return;
-    }
-
-    // ✅ Login autorizado: salvar dados no localStorage
-    localStorage.setItem('motorista_matricula', matricula);
-    localStorage.setItem('motorista_nome', dados.nome);
-
-    // Preencher nome na tela
-    const nomeEl = document.getElementById('motoristaNome');
-    if (nomeEl) nomeEl.textContent = dados.nome;
-
-    // Mostrar menu principal ou tela do motorista
-    mostrarTelaMenuPrincipal();
-
-    console.log('Motorista autenticado:', dados.nome);
-
-  } catch (erro) {
-    console.error('Erro Firebase:', erro);
-    alert('Erro ao validar matrícula. Verifique sua conexão e tente novamente.');
-  }
-};
-
-// Mostra menu principal para o motorista
-function mostrarTelaMenuPrincipal() {
-  // Esconder todas as telas SPA
-  document.querySelectorAll('.tela').forEach(tela => {
-    tela.classList.add('hidden');
-    tela.classList.remove('ativa');
-  });
-
-  // Mostrar menu principal
-  const menu = document.getElementById('mainMenu');
-  if (menu) menu.style.display = 'block';
-
-  // Foco acessível no primeiro botão do menu
-  setTimeout(() => {
-    const firstBtn = menu.querySelector('button, .btn');
-    if (firstBtn) firstBtn.focus();
-  }, 100);
-
-  console.log('Menu principal exibido para o motorista');
-}
-
-mostrarTelaMenuPrincipal();
-
-    console.log('Motorista autenticado:', dados.nome);
-
-    mostrarTela('tela-motorista'); // ou mainMenu se preferir
-
-  } catch (erro) {
-    console.error('Erro Firebase:', erro);
-    alert('Erro ao validar matrícula');
-  }
-};
-
-function mostrarTelaMenuPrincipal() {
-  // esconder todas as telas SPA
-  document.querySelectorAll('.tela').forEach(tela => {
-    tela.classList.add('hidden');
-    tela.classList.remove('ativa');
-  });
-
-  // mostrar menu principal
-  const menu = document.getElementById('mainMenu');
-  menu.style.display = 'block';
-
-  console.log('Menu principal exibido para o motorista');
 }
 
 window.openModal = openModal;
 window.closeModal = closeModal;
-window.openSection = openSection;
-window.backToMenu = backToMenu;
+window.closeAllModals = closeAllModals;
 
+// ======================= DARK MODE =======================
+function initDarkMode() {
+  const darkToggle = document.getElementById('darkToggle');
+  if (!darkToggle) return;
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const saved = localStorage.getItem('ac_dark');
 
-// ========== SERVICE WORKER REGISTRATION ==========
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(registration => {
-        console.log('ServiceWorker registrado com sucesso: ', registration.scope);
-      })
-      .catch(error => {
-        console.log('Falha ao registrar ServiceWorker: ', error);
-      });
+  if (saved === '1' || (!saved && prefersDark.matches)) document.body.classList.add('dark');
+
+  darkToggle.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('ac_dark', isDark ? '1' : '0');
+    darkToggle.textContent = isDark ? '☀️' : '🌙';
+  });
+  prefersDark.addEventListener('change', e => {
+    if (!localStorage.getItem('ac_dark')) {
+      document.body.classList.toggle('dark', e.matches);
+    }
   });
 }
+
+// ======================= PWA =======================
+function initPWA() {
+  const installBtn = document.getElementById('installBtn');
+  if (!installBtn) return;
+  let deferredPrompt;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'flex';
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return alert('App já instalado ou não pode ser instalado.');
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') installBtn.style.display = 'none';
+    deferredPrompt = null;
+  });
+
+  window.addEventListener('appinstalled', () => installBtn.style.display = 'none');
+}
+
+// ======================= EVENT LISTENERS GERAIS =======================
+function initEventListeners() {
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAllModals();
+  });
+
+  document.querySelectorAll('.modal-back').forEach(modal => {
+    modal.addEventListener('click', e => {
+      if (e.target === modal) closeModal(modal.id);
+    });
+  });
+}
+
+// ======================= INICIALIZAÇÃO =======================
+document.addEventListener('DOMContentLoaded', () => {
+  initDarkMode();
+  initPWA();
+  initEventListeners();
+  mostrarTela('welcome');
+  console.log('Portal AC Transporte iniciado');
+});
