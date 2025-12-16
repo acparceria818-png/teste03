@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAccessibility();
 });
 
-import { db, auth, loginEmailSenha, logoutUser, monitorAuth, getDocData, setDocData } from './firebase.js';
+import { db, doc, getDoc, setDoc } from './firebase.js';
 
 // Login de motorista
 async function loginMotorista(email, senha) {
