@@ -558,8 +558,13 @@ body.dark h3.section-title {
 }
 
 .hidden {
+  display: none !important;
+}
+
+.tela {
   display: none;
 }
+
 .tela.ativa {
   display: block;
 }
