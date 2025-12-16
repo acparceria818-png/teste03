@@ -80,8 +80,16 @@
   <p>Informe seus dados para continuar.</p>
 
   <div class="card">
-    <input type="text" placeholder="Matrícula ou Nome" class="input" />
-    <button class="btn">Entrar</button>
+    <input
+      id="matriculaMotorista"
+      type="text"
+      placeholder="Digite sua matrícula"
+      class="input"
+/>
+    <button class="btn" onclick="confirmarMatriculaMotorista()">
+      Entrar
+    </button>
+
   </div>
 
   <button class="btn secondary" onclick="mostrarTela('telaEscolhaPerfil')">
