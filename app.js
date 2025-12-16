@@ -423,7 +423,7 @@ setTimeout(() => {
   if (nomeEl) nomeEl.textContent = dados.nome;
 }, 100);
 
-mostrarTela('tela-motorista');
+mostrarTelaMenuPrincipal();
 
     console.log('Motorista autenticado:', dados.nome);
 
@@ -434,6 +434,21 @@ mostrarTela('tela-motorista');
     alert('Erro ao validar matrícula');
   }
 };
+
+function mostrarTelaMenuPrincipal() {
+  // esconder todas as telas SPA
+  document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.add('hidden');
+    tela.classList.remove('ativa');
+  });
+
+  // mostrar menu principal
+  const menu = document.getElementById('mainMenu');
+  menu.style.display = 'block';
+
+  console.log('Menu principal exibido para o motorista');
+}
+
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
