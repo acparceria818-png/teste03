@@ -1,11 +1,6 @@
 // app.js - CÓDIGO JAVASCRIPT COMPLETO
 // app.js
-import { db, doc, setDoc } from "./firebase.js";
-
-import { 
-  doc, 
-  getDoc 
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { db, doc, setDoc, getDoc } from "./firebase.js";
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('AC Transporte Portal - Inicializando...');
