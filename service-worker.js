@@ -7,7 +7,7 @@ const assets = [
   BASE,
   BASE + 'index.html',
   BASE + 'styles.css',
-  BASE + 'js/app.js',
+  BASE + 'app.js',
   BASE + 'logo.jpg',
   BASE + 'avatar.png',
   BASE + 'manifest.json',
