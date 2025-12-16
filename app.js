@@ -323,6 +323,33 @@ function filterRoutes(type) {
   });
 }
 
+let perfilSelecionado = null;
+
+function selecionarPerfil(perfil) {
+  perfilSelecionado = perfil;
+  console.log('Perfil selecionado:', perfil);
+
+  if (perfil === 'motorista') {
+    mostrarTela('tela-motorista-login');
+  }
+
+  if (perfil === 'passageiro') {
+    mostrarTela('tela-passageiro');
+  }
+
+  if (perfil === 'admin') {
+    mostrarTela('tela-admin-login');
+  }
+}
+
+function mostrarTela(id) {
+  document.querySelectorAll('.tela')
+    .forEach(t => t.classList.add('hidden'));
+
+  document.getElementById(id)?.classList.remove('hidden');
+}
+
+
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
