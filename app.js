@@ -346,13 +346,6 @@ function selecionarPerfil(perfil) {
   }
 }
 
-function mostrarTela(id) {
-  document.querySelectorAll('.tela')
-    .forEach(t => t.classList.add('hidden'));
-
-  document.getElementById(id)?.classList.remove('hidden');
-}
-
 // ================== CONTROLE DE TELAS (SPA) ==================
 
 function mostrarTela(id) {
@@ -373,12 +366,6 @@ window.irParaPerfil = function () {
   console.log('Entrar no portal clicado');
   mostrarTela('telaEscolhaPerfil');
 };
-
-// Clique nos cards
-function selecionarPerfil(perfil) {
-  localStorage.setItem('perfil', perfil);
-  mostrarTela(perfil);
-}
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
