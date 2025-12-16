@@ -367,6 +367,50 @@ document.addEventListener('DOMContentLoaded', () => {
   mostrarTela('welcome');
 });
 
+window.confirmarMatriculaMotorista = async function () {
+  const input = document.getElementById('matriculaMotorista');
+  const matricula = input.value.trim();
+
+  if (!matricula) {
+    alert('Informe sua matrícula');
+    return;
+  }
+
+  try {
+    const ref = doc(db, 'colaboradores', matricula);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      alert('Matrícula não encontrada');
+      return;
+    }
+
+    const dados = snap.data();
+
+    if (!dados.ativo) {
+      alert('Colaborador inativo. Procure o gestor.');
+      return;
+    }
+
+    if (dados.perfil !== 'motorista') {
+      alert('Acesso permitido apenas para motoristas');
+      return;
+    }
+
+    // ✅ LOGIN AUTORIZADO
+    localStorage.setItem('motorista_matricula', matricula);
+    localStorage.setItem('motorista_nome', dados.nome);
+
+    console.log('Motorista autenticado:', dados.nome);
+
+    mostrarTela('tela-motorista');
+
+  } catch (erro) {
+    console.error('Erro Firebase:', erro);
+    alert('Erro ao validar matrícula');
+  }
+};
+
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
