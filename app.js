@@ -373,6 +373,7 @@ window.confirmarMatriculaMotorista = async function () {
 
   if (!matricula) {
     alert('Informe sua matrícula');
+    input.focus();
     return;
   }
 
@@ -388,16 +389,16 @@ window.confirmarMatriculaMotorista = async function () {
     const dados = snap.data();
 
     if (!dados.ativo) {
-      alert('Colaborador inativo. Procure o gestor.');
+      alert('Colaborador inativo');
       return;
     }
 
     if (dados.perfil !== 'motorista') {
-      alert('Acesso permitido apenas para motoristas');
+      alert('Este acesso é exclusivo para motoristas');
       return;
     }
 
-    // ✅ LOGIN AUTORIZADO
+    // ✅ Login autorizado
     localStorage.setItem('motorista_matricula', matricula);
     localStorage.setItem('motorista_nome', dados.nome);
 
@@ -410,7 +411,6 @@ window.confirmarMatriculaMotorista = async function () {
     alert('Erro ao validar matrícula');
   }
 };
-
 
 // ========== SERVICE WORKER REGISTRATION ==========
 if ('serviceWorker' in navigator) {
