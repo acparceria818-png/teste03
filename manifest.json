@@ -2,7 +2,8 @@
   "name": "AC Transporte",
   "short_name": "AC Transporte",
   "description": "Portal de Transporte da AC Parceria e Terraplenagem",
-  "start_url": ".",
+  "start_url": "/teste03/",
+  "scope": "/teste03/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#b00000",
@@ -36,15 +37,15 @@
       "name": "Nova Rota",
       "short_name": "Rota",
       "description": "Iniciar uma nova rota",
-      "url": "/?screen=rotas",
-      "icons": [{ "src": "icon-route.png", "sizes": "96x96" }]
+      "url": "/teste03/?screen=rotas",
+      "icons": [{ "src": "logo.jpg", "sizes": "96x96" }]
     },
     {
       "name": "Controle de Veículo",
       "short_name": "Controle",
       "description": "Preencher controle de entrada/saída",
-      "url": "https://forms.gle/UDniKxPqcMKGUhFQA",
-      "icons": [{ "src": "icon-form.png", "sizes": "96x96" }]
+      "url": "/teste03/?action=form",
+      "icons": [{ "src": "logo.jpg", "sizes": "96x96" }]
     }
   ]
 }
