@@ -1,50 +1,167 @@
-// app.js - CÓDIGO JAVASCRIPT COMPLETO ATUALIZADO
+// app.js - SISTEMA COMPLETO ATUALIZADO COM ESCALAS POR IMAGEM
 import { 
-  db, 
-  getColaborador, 
-  updateLocalizacao, 
-  loginEmailSenha,
+  db,
+  auth,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  getColaborador,
+  getColaboradorByEmail,
+  updateLocalizacao,
+  registrarEmergencia,
+  registrarFeedback,
+  registrarAviso,
   monitorarRotas,
-  signOut 
+  monitorarEmergencias,
+  monitorarFeedbacks,
+  monitorarAvisos,
+  getAvisos,
+  updateAviso,
+  deleteAviso,
+  getEscalas,
+  addEscala,
+  updateEscala,
+  deleteEscala,
+  getEscalaPorMatricula,
+  resolverEmergencia,
+  resolverFeedback,
+  responderFeedback,
+  getRelatorios,
+  getEstatisticasDashboard,
+  getRotasPorTipo,
+  getMotoristasAtivos
 } from './firebase.js';
 
 // Estado global
 let estadoApp = {
   motorista: null,
+  passageiro: null,
+  admin: null,
   rotaAtiva: null,
+  onibusAtivo: null,
   watchId: null,
   isOnline: navigator.onLine,
   perfil: null,
-  unsubscribeRotas: null
+  unsubscribeRotas: null,
+  unsubscribeEmergencias: null,
+  unsubscribeFeedbacks: null,
+  unsubscribeAvisos: null,
+  emergenciaAtiva: false,
+  avisosAtivos: [],
+  escalas: [],
+  escalaMotorista: null,
+  estatisticas: null,
+  ultimaLocalizacao: null,
+  distanciaTotal: 0,
+  onlineUsers: []
 };
 
-// Inicialização
+// Dados de ônibus disponíveis
+const ONIBUS_DISPONIVEIS = [
+  { placa: 'TEZ-2J56', tag_ac: 'AC LO 583', tag_vale: '1JI347', cor: 'BRANCA', empresa: 'MUNDIAL P E L DE BENS MOVEIS LTDA' },
+  { placa: 'TEZ-2J60', tag_ac: 'AC LO 585', tag_vale: '1JI348', cor: 'BRANCA', empresa: 'MUNDIAL P E L DE BENS MOVEIS LTDA' },
+  { placa: 'TEZ-2J57', tag_ac: 'AC LO 584', tag_vale: '1JI349', cor: 'BRANCA', empresa: 'MUNDIAL P E L DE BENS MOVEIS LTDA' },
+  { placa: 'SJD5G38', tag_ac: 'AC LO 610', tag_vale: '1JI437', cor: 'BRANCA', empresa: 'MUNDIAL P E L DE BENS MOVEIS LTDA' },
+  { placa: 'SYA5A51', tag_ac: 'AC LO 611', tag_vale: '1JI436', cor: 'BRANCA', empresa: 'MUNDIAL P E L DE BENS MOVEIS LTDA' },
+  { placa: 'TEZ2J58', tag_ac: 'AC LO 609', tag_vale: '1JI420', cor: 'BRANCA', empresa: 'MUNDIAL P E L DE BENS MOVEIS LTDA' },
+  { placa: 'PZS6858', tag_ac: 'VL 080', tag_vale: '-', cor: 'BRANCA', empresa: 'A C PARCERIA E TERRAPLENAGEM LTDA' },
+  { placa: 'PZW5819', tag_ac: 'VL 083', tag_vale: '-', cor: 'BRANCA', empresa: 'A C PARCERIA E TERRAPLENAGEM LTDA' }
+];
+
+// Rotas disponíveis
+const ROTAS_DISPONIVEIS = [
+  { id: 'adm01', nome: 'ROTA ADM 01', tipo: 'adm', desc: 'Rota administrativa 01', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=18BCgBpobp1Olzmzy0RnPCUEd7Vnkc5s&usp=sharing' },
+  { id: 'adm02', nome: 'ROTA ADM 02', tipo: 'adm', desc: 'Rota administrativa 02', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1WxbIX8nw0xyGBLMvvi1SF3DRuwmZ5oM&usp=sharing' },
+  { id: 'op01', nome: 'ROTA 01', tipo: 'operacional', desc: 'Rota operacional 01', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1jCfFxq1ZwecS2IcHy7xGFLLgttsM-RQ&usp=sharing' },
+  { id: 'op02', nome: 'ROTA 02', tipo: 'operacional', desc: 'Rota operacional 02', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1LCvNJxWBbZ_chpbdn_lk_Dm6NPA194g&usp=sharing' },
+  { id: 'op03', nome: 'ROTA 03', tipo: 'operacional', desc: 'Rota operacional 03', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1bdwkrClh5AZml0mnDGlOzYcaR4w1BL0&usp=sharing' },
+  { id: 'op04', nome: 'ROTA 04', tipo: 'operacional', desc: 'Rota operacional 04', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1ejibzdZkhX2QLnP9YgvvHdQpZELFvXo&usp=sharing' },
+  { id: 'op05', nome: 'ROTA 05', tipo: 'operacional', desc: 'Rota operacional 05', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1L9xjAWFUupMc7eQbqVJz-SNWlYX5SHo&usp=sharing' },
+  { id: 'ret01', nome: 'RETORNO OVERLAND - ROTA 01', tipo: 'retorno', desc: 'Rota de retorno Overland 01', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1ClQVIaRLOYYWHU7fvP87r1BVy85a_eg&usp=sharing' },
+  { id: 'ret02', nome: 'RETORNO OVERLAND - ROTA 02', tipo: 'retorno', desc: 'Rota de retorno Overland 02', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1WOIMgeLgV01B8yk7HoX6tazdCHXQnok&usp=sharing' }
+];
+
+// ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('AC Transporte Portal - Inicializando...');
+  console.log('🚀 AC Transporte Portal - Inicializando...');
+  
+  // Adicionar rodapé em todas as páginas
+  adicionarRodape();
   
   // Verificar sessão existente
   verificarSessao();
   
-  // Inicializar todas as funcionalidades
+  // Inicializar funcionalidades
   initDarkMode();
   initPWA();
   initEventListeners();
-  initAccessibility();
   initConnectionMonitor();
+  initAvisos();
+  iniciarMonitoramentoOnline();
   
-  // Carregar rotas dinamicamente
-  carregarRotas();
+  console.log('✅ Aplicativo inicializado com sucesso');
 });
+
+// ========== ADICIONAR RODAPÉ ==========
+function adicionarRodape() {
+  const footer = document.createElement('footer');
+  footer.className = 'footer-dev';
+  footer.innerHTML = `
+    <div class="footer-content">
+      <span>Desenvolvido por Juan Sales</span>
+      <div class="footer-contacts">
+        <a href="tel:+5594992233753"><i class="fas fa-phone"></i> (94) 99223-3753</a>
+        <a href="mailto:Juansalesadm@gmail.com"><i class="fas fa-envelope"></i> Juansalesadm@gmail.com</a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(footer);
+}
 
 // ========== GERENCIAMENTO DE SESSÃO ==========
 function verificarSessao() {
+  const perfil = localStorage.getItem('perfil_ativo');
   const matricula = localStorage.getItem('motorista_matricula');
   const nome = localStorage.getItem('motorista_nome');
+  const adminLogado = localStorage.getItem('admin_logado');
   
-  if (matricula && nome) {
+  if (perfil === 'motorista' && matricula && nome) {
     estadoApp.motorista = { matricula, nome };
+    estadoApp.perfil = 'motorista';
     mostrarTela('tela-motorista');
     updateUserStatus(nome, matricula);
+    iniciarMonitoramentoAvisos();
+    carregarEscalaMotorista(matricula);
+    
+    // Carregar ônibus salvo
+    const onibusSalvo = localStorage.getItem('onibus_ativo');
+    if (onibusSalvo) {
+      estadoApp.onibusAtivo = JSON.parse(onibusSalvo);
+      atualizarInfoOnibus();
+    }
+  } else if (perfil === 'passageiro') {
+    estadoApp.perfil = 'passageiro';
+    mostrarTela('tela-passageiro');
+    iniciarMonitoramentoPassageiro();
+    iniciarMonitoramentoAvisos();
+  } else if (perfil === 'admin' && adminLogado) {
+    estadoApp.perfil = 'admin';
+    estadoApp.admin = { 
+      nome: 'Administrador',
+      email: localStorage.getItem('admin_email')
+    };
+    mostrarTela('tela-admin-dashboard');
+    iniciarMonitoramentoAdmin();
+    carregarEscalas();
   }
 }
 
@@ -58,11 +175,49 @@ function updateUserStatus(nome, matricula) {
   if (userName) userName.textContent = nome;
   if (motoristaNome) motoristaNome.textContent = nome;
   if (motoristaMatricula) motoristaMatricula.textContent = matricula;
+  
+  // Atualizar tags do motorista
+  atualizarInfoOnibus();
 }
 
-// ========== FUNÇÕES DE LOGIN/LOGOUT ==========
+function atualizarInfoOnibus() {
+  if (!estadoApp.motorista || !estadoApp.onibusAtivo) return;
+  
+  const userTags = document.querySelector('.user-tags');
+  if (!userTags) return;
+  
+  userTags.innerHTML = `
+    <span class="user-tag"><i class="fas fa-bus"></i> ${estadoApp.onibusAtivo.placa}</span>
+    <span class="user-tag"><i class="fas fa-tag"></i> ${estadoApp.onibusAtivo.tag_ac}</span>
+    <span class="user-tag"><i class="fas fa-id-card"></i> ${estadoApp.onibusAtivo.tag_vale}</span>
+  `;
+}
+
+// ========== SELEÇÃO DE PERFIL ==========
+window.entrarNoPortal = function () {
+  mostrarTela('telaEscolhaPerfil');
+};
+
+window.selecionarPerfil = function (perfil) {
+  console.log('👤 Perfil selecionado:', perfil);
+  estadoApp.perfil = perfil;
+  localStorage.setItem('perfil_ativo', perfil);
+
+  if (perfil === 'motorista') {
+    mostrarTela('tela-motorista-login');
+  } else if (perfil === 'passageiro') {
+    estadoApp.passageiro = { nome: 'Passageiro' };
+    mostrarTela('tela-passageiro');
+    iniciarMonitoramentoPassageiro();
+    iniciarMonitoramentoAvisos();
+  } else if (perfil === 'admin') {
+    mostrarTela('tela-admin-login');
+  }
+};
+
+// ========== LOGIN MOTORISTA ==========
 window.confirmarMatriculaMotorista = async function () {
-  showLoading('Validando matrícula...');
+  showLoading('🔍 Validando matrícula...');
   
   const input = document.getElementById('matriculaMotorista');
   const loginBtn = document.getElementById('loginBtn');
@@ -82,22 +237,14 @@ window.confirmarMatriculaMotorista = async function () {
     return;
   }
 
-  if (!validarMatricula(matricula)) {
-    alert('Matrícula inválida. Use apenas letras e números (4-10 caracteres).');
-    input.focus();
-    hideLoading();
-    return;
-  }
-
   try {
-    // Desabilitar botão durante a validação
     loginBtn.disabled = true;
     loginBtn.textContent = 'Validando...';
     
     const snap = await getColaborador(matricula);
 
     if (!snap.exists()) {
-      alert('Matrícula não encontrada');
+      alert('❌ Matrícula não encontrada');
       input.focus();
       return;
     }
@@ -105,44 +252,149 @@ window.confirmarMatriculaMotorista = async function () {
     const dados = snap.data();
 
     if (!dados.ativo) {
-      alert('Colaborador inativo. Contate a administração.');
+      alert('❌ Colaborador inativo. Contate a administração.');
       return;
     }
 
     if (dados.perfil !== 'motorista') {
-      alert('Este acesso é exclusivo para motoristas');
+      alert('❌ Este acesso é exclusivo para motoristas');
       return;
     }
 
-    // ✅ Login autorizado
     localStorage.setItem('motorista_matricula', matricula);
     localStorage.setItem('motorista_nome', dados.nome);
+    localStorage.setItem('motorista_email', dados.email || '');
+    localStorage.setItem('perfil_ativo', 'motorista');
     
-    estadoApp.motorista = { matricula, nome: dados.nome };
+    estadoApp.motorista = { 
+      matricula, 
+      nome: dados.nome,
+      email: dados.email || ''
+    };
     
-    // Atualizar interface
-    updateUserStatus(dados.nome, matricula);
-    
-    // Mostrar tela do motorista
-    mostrarTela('tela-motorista');
-    
-    console.log('Motorista autenticado:', dados.nome);
+    carregarOnibus();
+    console.log('✅ Motorista autenticado:', dados.nome);
 
   } catch (erro) {
     console.error('Erro Firebase:', erro);
-    alert('Erro ao validar matrícula. Verifique sua conexão e tente novamente.');
+    alert('❌ Erro ao validar matrícula. Verifique sua conexão e tente novamente.');
   } finally {
     hideLoading();
-    loginBtn.disabled = false;
-    loginBtn.textContent = 'Entrar';
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Entrar';
+    }
   }
 };
 
-function validarMatricula(matricula) {
-  const regex = /^[A-Z0-9]{4,10}$/;
-  return regex.test(matricula);
+// ========== CARREGAR ÔNIBUS ==========
+function carregarOnibus() {
+  const container = document.getElementById('onibusList');
+  if (!container) return;
+  
+  container.innerHTML = ONIBUS_DISPONIVEIS.map(onibus => `
+    <div class="onibus-card" onclick="selecionarOnibus('${onibus.placa}')">
+      <div class="onibus-icon">
+        <i class="fas fa-bus"></i>
+      </div>
+      <div class="onibus-info">
+        <h4>${onibus.placa}</h4>
+        <p><strong>TAG AC:</strong> ${onibus.tag_ac}</p>
+        <p><strong>TAG VALE:</strong> ${onibus.tag_vale}</p>
+        <small><i class="fas fa-paint-brush"></i> ${onibus.cor}</small>
+      </div>
+      <div class="onibus-select">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+    </div>
+  `).join('');
+  
+  mostrarTela('tela-selecao-onibus');
 }
 
+// ========== SELEÇÃO DE ÔNIBUS ==========
+window.selecionarOnibus = function(placa) {
+  const onibus = ONIBUS_DISPONIVEIS.find(o => o.placa === placa);
+  if (!onibus) {
+    alert('Ônibus não encontrado');
+    return;
+  }
+  
+  estadoApp.onibusAtivo = onibus;
+  localStorage.setItem('onibus_ativo', JSON.stringify(onibus));
+  
+  // Solicitar permissão de localização
+  solicitarPermissaoLocalizacao();
+};
+
+function solicitarPermissaoLocalizacao() {
+  console.log('📍 Iniciando solicitação de localização...');
+  
+  if (!navigator.geolocation) {
+    console.warn('❌ Geolocation não suportada');
+    finalizarLoginSemGPS();
+    return;
+  }
+  
+  showLoading('📍 Obtendo localização...');
+  
+  const options = {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  };
+  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      console.log('✅ GPS obtido no login:', position.coords);
+      hideLoading();
+      finalizarLoginComGPS(position);
+    },
+    (error) => {
+      console.warn('⚠️ GPS falhou no login:', error.message);
+      hideLoading();
+      
+      alert('📍 Localização não disponível no momento.\n\nO login será realizado normalmente. Você pode ativar o GPS depois.');
+      
+      finalizarLoginSemGPS();
+    },
+    options
+  );
+  
+  function finalizarLoginComGPS(position) {
+    if (!estadoApp.motorista || !estadoApp.onibusAtivo) return;
+    
+    updateUserStatus(estadoApp.motorista.nome, estadoApp.motorista.matricula);
+    
+    const onibusElement = document.getElementById('motoristaOnibus');
+    if (onibusElement) {
+      onibusElement.textContent = `${estadoApp.onibusAtivo.placa} (${estadoApp.onibusAtivo.tag_ac})`;
+    }
+    
+    mostrarTela('tela-motorista');
+    iniciarMonitoramentoAvisos();
+    
+    alert(`✅ Login realizado!\n\n👋 ${estadoApp.motorista.nome}\n🚌 ${estadoApp.onibusAtivo.placa}\n📍 GPS ativo (Precisão: ${position.coords.accuracy.toFixed(0)}m)`);
+  }
+  
+  function finalizarLoginSemGPS() {
+    if (!estadoApp.motorista || !estadoApp.onibusAtivo) return;
+    
+    updateUserStatus(estadoApp.motorista.nome, estadoApp.motorista.matricula);
+    
+    const onibusElement = document.getElementById('motoristaOnibus');
+    if (onibusElement) {
+      onibusElement.textContent = `${estadoApp.onibusAtivo.placa} (${estadoApp.onibusAtivo.tag_ac})`;
+    }
+    
+    mostrarTela('tela-motorista');
+    iniciarMonitoramentoAvisos();
+    
+    alert(`✅ Login realizado!\n\n👋 ${estadoApp.motorista.nome}\n🚌 ${estadoApp.onibusAtivo.placa}\n📍 GPS desativado`);
+  }
+}
+
+// ========== LOGIN ADMIN ==========
 window.loginAdmin = async function () {
   const email = document.getElementById('adminEmail').value;
   const senha = document.getElementById('adminSenha').value;
@@ -152,286 +404,690 @@ window.loginAdmin = async function () {
     return;
   }
   
-  try {
-    await loginEmailSenha(email, senha);
+  const ADMIN_CREDENTIALS = {
+    email: 'admin@acparceria.com',
+    senha: '050370'
+  };
+  
+  if (email === ADMIN_CREDENTIALS.email && senha === ADMIN_CREDENTIALS.senha) {
+    localStorage.setItem('admin_logado', 'true');
+    localStorage.setItem('admin_email', email);
+    localStorage.setItem('perfil_ativo', 'admin');
+    
+    estadoApp.admin = { email, nome: 'Administrador' };
+    
     mostrarTela('tela-admin-dashboard');
     iniciarMonitoramentoAdmin();
-  } catch (erro) {
-    alert('Login falhou: ' + erro.message);
+    iniciarMonitoramentoEmergencias();
+    iniciarMonitoramentoFeedbacks();
+    iniciarMonitoramentoAvisos();
+    carregarEscalas();
+    
+    console.log('✅ Admin logado com sucesso');
+  } else {
+    alert('❌ Credenciais inválidas');
   }
 };
 
+// ========== LOGOUT ==========
 window.logout = function () {
   if (estadoApp.watchId) {
     navigator.geolocation.clearWatch(estadoApp.watchId);
     estadoApp.watchId = null;
   }
   
-  if (estadoApp.unsubscribeRotas) {
-    estadoApp.unsubscribeRotas();
-  }
+  if (estadoApp.unsubscribeRotas) estadoApp.unsubscribeRotas();
+  if (estadoApp.unsubscribeEmergencias) estadoApp.unsubscribeEmergencias();
+  if (estadoApp.unsubscribeFeedbacks) estadoApp.unsubscribeFeedbacks();
+  if (estadoApp.unsubscribeAvisos) estadoApp.unsubscribeAvisos();
   
-  // Limpar estado
   estadoApp = {
     motorista: null,
+    passageiro: null,
+    admin: null,
     rotaAtiva: null,
+    onibusAtivo: null,
     watchId: null,
     isOnline: navigator.onLine,
     perfil: null,
-    unsubscribeRotas: null
+    unsubscribeRotas: null,
+    unsubscribeEmergencias: null,
+    unsubscribeFeedbacks: null,
+    unsubscribeAvisos: null,
+    emergenciaAtiva: false,
+    avisosAtivos: [],
+    escalas: [],
+    escalaMotorista: null,
+    estatisticas: null,
+    ultimaLocalizacao: null,
+    distanciaTotal: 0,
+    onlineUsers: []
   };
   
-  // Limpar storage
-  localStorage.clear();
-  sessionStorage.clear();
+  localStorage.removeItem('perfil_ativo');
+  localStorage.removeItem('motorista_matricula');
+  localStorage.removeItem('motorista_nome');
+  localStorage.removeItem('motorista_email');
+  localStorage.removeItem('onibus_ativo');
+  localStorage.removeItem('admin_logado');
+  localStorage.removeItem('admin_email');
   
-  // Resetar interface
-  document.getElementById('userStatus').style.display = 'none';
-  document.getElementById('pararRotaBtn').style.display = 'none';
-  document.getElementById('rotaStatus').textContent = 'Nenhuma rota ativa';
+  const userStatus = document.getElementById('userStatus');
+  if (userStatus) userStatus.style.display = 'none';
   
-  // Voltar para tela inicial
+  const pararRotaBtn = document.getElementById('pararRotaBtn');
+  if (pararRotaBtn) pararRotaBtn.style.display = 'none';
+  
+  const rotaStatus = document.getElementById('rotaStatus');
+  if (rotaStatus) rotaStatus.textContent = 'Nenhuma rota ativa';
+  
   mostrarTela('welcome');
   
-  console.log('Usuário deslogado');
+  console.log('👋 Usuário deslogado');
 };
 
-// ========== FUNÇÕES DE ROTA ==========
-window.iniciarRota = async function (nomeRota) {
-  if (!navigator.geolocation) {
-    alert('Geolocalização não suportada neste navegador.');
-    return;
-  }
+// ========== SISTEMA DE GPS EM TEMPO REAL ==========
+async function obterLocalizacaoTempoReal() {
+  console.log('📍 Sistema GPS Tempo Real iniciado...');
+  
+  return new Promise((resolve, reject) => {
+    const opcoesGPS = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    };
+    
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        console.log('✅ GPS obtido em tempo real:', pos.coords);
+        resolve(pos);
+      },
+      (err) => {
+        console.warn('❌ GPS tempo real falhou:', err.message);
+        reject(err);
+      },
+      opcoesGPS
+    );
+  });
+}
 
-  if (!estadoApp.motorista) {
-    alert('Motorista não autenticado. Faça login novamente.');
+// ========== FUNÇÕES DE ROTA E LOCALIZAÇÃO ==========
+window.iniciarRota = async function (nomeRota) {
+  console.log(`🛣️ Iniciando rota: ${nomeRota}`);
+  
+  if (!estadoApp.motorista || !estadoApp.onibusAtivo) {
+    alert('❌ Motorista ou ônibus não configurado. Faça login novamente.');
     mostrarTela('tela-motorista-login');
     return;
   }
 
-  if (!await checkLocationPermission()) {
+  if (!confirm(`🚀 Iniciar Rota: ${nomeRota}\n\nÔnibus: ${estadoApp.onibusAtivo.placa}\n\nSua localização será compartilhada em tempo real.`)) {
     return;
   }
 
-  if (!confirm(`Deseja iniciar a rota "${nomeRota}"?\n\nSua localização será compartilhada em tempo real.`)) {
-    return;
-  }
-
-  // Atualizar interface
   const btn = event?.target;
+  const btnOriginalText = btn?.textContent || '▶️ Iniciar Rota';
   if (btn) {
     btn.classList.add('loading');
-    btn.textContent = 'Iniciando...';
+    btn.textContent = 'Obtendo localização...';
+    btn.disabled = true;
   }
 
   try {
-    // Primeira localização imediata
-    const position = await getCurrentPosition();
-    await enviarLocalizacao(nomeRota, position.coords);
+    let position;
+    
+    try {
+      position = await obterLocalizacaoTempoReal();
+      console.log('📍 Localização obtida:', position.coords);
+    } catch (erro) {
+      console.warn('❌ GPS falhou:', erro);
+      alert('❌ Não foi possível obter localização precisa. Verifique as permissões do GPS e tente novamente.');
+      if (btn) {
+        btn.classList.remove('loading');
+        btn.textContent = btnOriginalText;
+        btn.disabled = false;
+      }
+      return;
+    }
+    
+    // Enviar primeira localização
+    await enviarLocalizacaoTempoReal(nomeRota, position.coords);
     
     // Iniciar monitoramento contínuo
     estadoApp.watchId = navigator.geolocation.watchPosition(
       async (pos) => {
-        await enviarLocalizacao(nomeRota, pos.coords);
+        await enviarLocalizacaoTempoReal(nomeRota, pos.coords);
       },
       (erro) => {
-        console.error('Erro na geolocalização:', erro);
-        alert('Erro ao obter localização. Verifique permissões.');
+        console.warn('⚠️ Erro no monitoramento GPS:', erro);
+        mostrarNotificacao('⚠️ GPS', 'Problema na obtenção da localização');
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 5000,
+        maximumAge: 1000,
         timeout: 10000
       }
     );
-
+    
     estadoApp.rotaAtiva = nomeRota;
     
-    // Atualizar interface
-    document.getElementById('rotaStatus').textContent = `Rota ativa: ${nomeRota}`;
-    document.getElementById('pararRotaBtn').style.display = 'block';
+    const rotaStatus = document.getElementById('rotaStatus');
+    if (rotaStatus) {
+      rotaStatus.textContent = `📍 Rota ativa: ${nomeRota}`;
+      rotaStatus.classList.remove('simulada');
+    }
     
-    alert(`Rota "${nomeRota}" iniciada com sucesso!\n\nSua localização está sendo compartilhada.`);
+    const pararBtn = document.getElementById('pararRotaBtn');
+    if (pararBtn) pararBtn.style.display = 'block';
     
-    // Voltar para tela do motorista
+    mostrarNotificacao('✅ Rota Iniciada', `Rota "${nomeRota}" iniciada com sucesso!`);
+    
     mostrarTela('tela-motorista');
+    
+    alert(`✅ Rota "${nomeRota}" iniciada com sucesso!\n\n📍 Localização ativa em tempo real\n🚌 Ônibus: ${estadoApp.onibusAtivo.placa}\n🎯 Precisão: ${position.coords.accuracy.toFixed(0)}m`);
 
   } catch (erro) {
-    console.error('Erro ao iniciar rota:', erro);
-    alert('Não foi possível iniciar a rota. Verifique sua conexão e permissões de localização.');
+    console.error('❌ Erro ao iniciar rota:', erro);
+    alert(`❌ Não foi possível iniciar a rota:\n\n${erro.message || 'Erro desconhecido'}\n\nVerifique sua conexão e tente novamente.`);
   } finally {
     if (btn) {
       btn.classList.remove('loading');
-      btn.textContent = '▶️ Iniciar Rota';
+      btn.textContent = btnOriginalText;
+      btn.disabled = false;
     }
   }
 };
 
-async function enviarLocalizacao(nomeRota, coords) {
-  if (!estadoApp.motorista) return;
+async function enviarLocalizacaoTempoReal(nomeRota, coords) {
+  if (!estadoApp.motorista || !estadoApp.onibusAtivo) return;
 
   try {
-    await updateLocalizacao(estadoApp.motorista.matricula, {
+    // Calcular distância percorrida
+    let distanciaKm = 0;
+    if (estadoApp.ultimaLocalizacao) {
+      const lat1 = estadoApp.ultimaLocalizacao.latitude;
+      const lon1 = estadoApp.ultimaLocalizacao.longitude;
+      const lat2 = coords.latitude;
+      const lon2 = coords.longitude;
+      
+      distanciaKm = calcularDistancia(lat1, lon1, lat2, lon2);
+    }
+    
+    // Atualizar distância total
+    estadoApp.distanciaTotal = (estadoApp.distanciaTotal || 0) + distanciaKm;
+    estadoApp.ultimaLocalizacao = coords;
+
+    const dadosAtualizacao = {
       motorista: estadoApp.motorista.nome,
       matricula: estadoApp.motorista.matricula,
+      email: estadoApp.motorista.email,
       rota: nomeRota,
+      onibus: estadoApp.onibusAtivo.placa,
+      tag_ac: estadoApp.onibusAtivo.tag_ac,
+      tag_vale: estadoApp.onibusAtivo.tag_vale,
+      modelo: estadoApp.onibusAtivo.empresa,
+      capacidade: 50,
       latitude: coords.latitude,
       longitude: coords.longitude,
+      velocidade: coords.speed ? (coords.speed * 3.6).toFixed(1) : '0',
+      precisao: coords.accuracy,
+      distancia: estadoApp.distanciaTotal.toFixed(2),
+      ativo: true,
       timestamp: new Date(),
-      velocidade: coords.speed || null,
-      precisao: coords.accuracy
-    });
+      online: true,
+      ultimaAtualizacao: new Date()
+    };
     
-    console.log('Localização enviada:', new Date().toLocaleTimeString());
+    await updateLocalizacao(estadoApp.motorista.matricula, dadosAtualizacao);
+    
+    console.log('📍 Localização enviada:', new Date().toLocaleTimeString(), 
+                'Distância:', estadoApp.distanciaTotal.toFixed(2), 'km',
+                'Velocidade:', dadosAtualizacao.velocidade, 'km/h',
+                'Precisão:', coords.accuracy.toFixed(0), 'm');
   } catch (erro) {
     console.error('Erro ao enviar localização:', erro);
   }
 }
 
+// Função para calcular distância entre dois pontos (Haversine formula)
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Raio da Terra em km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 window.pararRota = function () {
   if (!estadoApp.watchId) return;
+  
+  if (!confirm('Deseja realmente parar o compartilhamento da rota?')) {
+    return;
+  }
   
   navigator.geolocation.clearWatch(estadoApp.watchId);
   estadoApp.watchId = null;
   estadoApp.rotaAtiva = null;
+  estadoApp.distanciaTotal = 0;
+  estadoApp.ultimaLocalizacao = null;
   
-  // Limpar do Firebase (opcional)
   if (estadoApp.motorista) {
     updateLocalizacao(estadoApp.motorista.matricula, {
       ativo: false,
+      online: false,
       timestamp: new Date()
     });
   }
   
-  // Atualizar interface
   document.getElementById('rotaStatus').textContent = 'Nenhuma rota ativa';
   document.getElementById('pararRotaBtn').style.display = 'none';
   
-  alert('Rota encerrada. Localização não está mais sendo compartilhada.');
+  mostrarNotificacao('⏹️ Rota Encerrada', 'Localização não está mais sendo compartilhada.');
 };
 
-// ========== FUNÇÕES AUXILIARES DE GEOLOCALIZAÇÃO ==========
-function getCurrentPosition() {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    });
-  });
-}
-
-async function checkLocationPermission() {
-  if (!navigator.permissions) return true;
+// ========== BOTÃO DE EMERGÊNCIA COM SINISTRO ==========
+window.ativarEmergencia = async function() {
+  if (!estadoApp.motorista) {
+    alert('❌ Faça login como motorista para usar esta função');
+    return;
+  }
+  
+  if (estadoApp.emergenciaAtiva) {
+    estadoApp.emergenciaAtiva = false;
+    document.getElementById('emergenciaBtn').textContent = '🚨 EMERGÊNCIA';
+    document.getElementById('emergenciaBtn').classList.remove('emergencia-ativa');
+    mostrarNotificacao('✅ Emergência Desativada', 'Situação de emergência encerrada');
+    return;
+  }
+  
+  // Mostrar opções
+  const opcao = await mostrarOpcoesEmergencia();
+  
+  if (!opcao) return;
+  
+  if (opcao === 'sinistro') {
+    // Abrir formulário de sinistro
+    window.open('https://forms.gle/ima9J1SrgVyYVgvc9', '_blank');
+    return;
+  }
+  
+  const descricao = prompt('Descreva brevemente a situação:');
+  if (!descricao) return;
   
   try {
-    const permission = await navigator.permissions.query({ name: 'geolocation' });
+    await registrarEmergencia({
+      motorista: estadoApp.motorista.nome,
+      matricula: estadoApp.motorista.matricula,
+      onibus: estadoApp.onibusAtivo?.placa || 'Não informado',
+      rota: estadoApp.rotaAtiva || 'Não informada',
+      tipo: opcao,
+      descricao: descricao,
+      status: 'pendente',
+      timestamp: new Date()
+    });
     
-    if (permission.state === 'denied') {
-      alert('Permissão de localização negada. Por favor, ative nas configurações do seu navegador.');
-      return false;
+    estadoApp.emergenciaAtiva = true;
+    document.getElementById('emergenciaBtn').textContent = '✅ EMERGÊNCIA ATIVA';
+    document.getElementById('emergenciaBtn').classList.add('emergencia-ativa');
+    
+    mostrarNotificacao('🚨 EMERGÊNCIA ATIVADA', 'A equipe de suporte foi notificada!');
+    
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 200]);
     }
     
-    if (permission.state === 'prompt') {
-      // O navegador mostrará o prompt automaticamente
-      return true;
-    }
-    
-    return true;
-  } catch (error) {
-    console.warn('API de permissões não suportada:', error);
-    return true;
+  } catch (erro) {
+    console.error('Erro ao registrar emergência:', erro);
+    alert('❌ Erro ao ativar emergência. Tente novamente.');
   }
-}
-
-// ========== CARREGAMENTO DE ROTAS ==========
-function carregarRotas() {
-  const rotas = [
-    { id: 'adm01', nome: 'ROTA ADM 01', tipo: 'adm', desc: 'Rota administrativa 01', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=18BCgBpobp1Olzmzy0RnPCUEd7Vnkc5s&usp=sharing' },
-    { id: 'adm02', nome: 'ROTA ADM 02', tipo: 'adm', desc: 'Rota administrativa 02', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1WxbIX8nw0xyGBLMvvi1SF3DRuwmZ5oM&usp=sharing' },
-    { id: 'op01', nome: 'ROTA 01', tipo: 'operacional', desc: 'Rota operacional 01', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1jCfFxq1ZwecS2IcHy7xGFLLgttsM-RQ&usp=sharing' },
-    { id: 'op02', nome: 'ROTA 02', tipo: 'operacional', desc: 'Rota operacional 02', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1LCvNJxWBbZ_chpbdn_lk_Dm6NPA194g&usp=sharing' },
-    { id: 'op03', nome: 'ROTA 03', tipo: 'operacional', desc: 'Rota operacional 03', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1bdwkrClh5AZml0mnDGlOzYcaR4w1BL0&usp=sharing' },
-    { id: 'op04', nome: 'ROTA 04', tipo: 'operacional', desc: 'Rota operacional 04', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1ejibzdZkhX2QLnP9YgvvHdQpZELFvXo&usp=sharing' },
-    { id: 'op05', nome: 'ROTA 05', tipo: 'operacional', desc: 'Rota operacional 05', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1L9xjAWFUupMc7eQbqVJz-SNWlYX5SHo&usp=sharing' },
-    { id: 'ret01', nome: 'RETORNO OVERLAND - ROTA 01', tipo: 'retorno', desc: 'Rota de retorno Overland 01', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1ClQVIaRLOYYWHU7fvP87r1BVy85a_eg&usp=sharing' },
-    { id: 'ret02', nome: 'RETORNO OVERLAND - ROTA 02', tipo: 'retorno', desc: 'Rota de retorno Overland 02', mapsUrl: 'https://www.google.com/maps/d/u/1/edit?mid=1WOIMgeLgV01B8yk7HoX6tazdCHXQnok&usp=sharing' }
-  ];
-  
-  const container = document.getElementById('routesContainer');
-  if (!container) return;
-  
-  container.innerHTML = rotas.map(rota => `
-    <div class="route-item ${rota.tipo}" data-tipo="${rota.tipo}">
-      <div class="route-info">
-        <div style="font-weight:800">
-          ${rota.tipo === 'adm' ? '🏢' : rota.tipo === 'retorno' ? '🔄' : '🚛'} 
-          ${rota.nome}
-        </div>
-        <small style="color:#666">${rota.desc}</small>
-      </div>
-      <div class="route-actions">
-        <button class="btn" onclick="iniciarRota('${rota.nome}')" 
-                ${!estadoApp.motorista ? 'disabled' : ''}>
-          ▶️ Iniciar Rota
-        </button>
-        <a class="btn secondary" href="${rota.mapsUrl}" target="_blank" rel="noopener noreferrer">
-          Abrir no Maps
-        </a>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ========== FUNÇÕES DE FILTRO E BUSCA ==========
-window.searchRoutes = debounce(function() {
-  const searchTerm = document.getElementById('routeSearch')?.value.toLowerCase();
-  const routeItems = document.querySelectorAll('.route-item');
-  
-  routeItems.forEach(item => {
-    const routeName = item.querySelector('.route-info div').textContent.toLowerCase();
-    const routeDesc = item.querySelector('.route-info small').textContent.toLowerCase();
-    
-    if (routeName.includes(searchTerm) || routeDesc.includes(searchTerm) || !searchTerm) {
-      item.style.display = 'flex';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-}, 300);
-
-window.filterRoutes = function(type) {
-  const routeItems = document.querySelectorAll('.route-item');
-  const filterButtons = document.querySelectorAll('.filter-btn');
-  
-  // Atualizar botões ativos
-  filterButtons.forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-  
-  routeItems.forEach(item => {
-    const itemType = item.dataset.tipo;
-    
-    if (type === 'all' || itemType === type) {
-      item.style.display = 'flex';
-    } else {
-      item.style.display = 'none';
-    }
-  });
 };
 
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
+function mostrarOpcoesEmergencia() {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'modal-back';
+    modal.innerHTML = `
+      <div class="modal">
+        <button class="close" onclick="this.parentElement.parentElement.remove(); resolve(null)">✕</button>
+        <h3><i class="fas fa-exclamation-triangle"></i> Tipo de Emergência</h3>
+        <p>Selecione o tipo de emergência:</p>
+        
+        <div class="sinistro-options">
+          <div class="sinistro-option" onclick="selecionarOpcao('acidente')">
+            <i class="fas fa-car-crash"></i>
+            <h4>Acidente</h4>
+          </div>
+          
+          <div class="sinistro-option" onclick="selecionarOpcao('mecanico')">
+            <i class="fas fa-cog"></i>
+            <h4>Problema Mecânico</h4>
+          </div>
+          
+          <div class="sinistro-option" onclick="selecionarOpcao('saude')">
+            <i class="fas fa-heartbeat"></i>
+            <h4>Problema de Saúde</h4>
+          </div>
+          
+          <div class="sinistro-option" onclick="selecionarOpcao('sinistro')">
+            <i class="fas fa-file-alt"></i>
+            <h4>Sinistro/Avaria</h4>
+            <small>Preencher formulário</small>
+          </div>
+        </div>
+        
+        <div class="action-footer">
+          <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove(); resolve(null)">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+    // Configurar handlers
+    window.selecionarOpcao = function(opcao) {
+      modal.remove();
+      resolve(opcao);
     };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
+  });
 }
 
-// ========== MONITORAMENTO PARA PASSAGEIRO/ADMIN ==========
+// ========== FEEDBACK ==========
+window.abrirFeedback = function(perfil) {
+  mostrarTela(`tela-feedback-${perfil}`);
+};
+
+window.enviarFeedback = async function(perfil) {
+  const tipo = document.getElementById(`feedbackTipo${perfil}`)?.value;
+  const mensagem = document.getElementById(`feedbackMensagem${perfil}`)?.value;
+  
+  if (!tipo || !mensagem) {
+    alert('Preencha todos os campos');
+    return;
+  }
+  
+  if (mensagem.length < 10) {
+    alert('A mensagem deve ter pelo menos 10 caracteres');
+    return;
+  }
+  
+  try {
+    const dados = {
+      tipo: tipo,
+      mensagem: mensagem,
+      status: 'pendente',
+      timestamp: new Date()
+    };
+    
+    if (perfil === 'motorista' && estadoApp.motorista) {
+      dados.motorista = estadoApp.motorista.nome;
+      dados.matricula = estadoApp.motorista.matricula;
+      dados.perfil = 'motorista';
+    } else if (perfil === 'passageiro') {
+      dados.perfil = 'passageiro';
+    }
+    
+    await registrarFeedback(dados);
+    
+    document.getElementById(`feedbackMensagem${perfil}`).value = '';
+    
+    if (perfil === 'motorista') {
+      mostrarTela('tela-motorista');
+    } else {
+      mostrarTela('tela-passageiro');
+    }
+    
+    mostrarNotificacao('✅ Feedback Enviado', 'Obrigado pelo seu feedback!');
+    
+  } catch (erro) {
+    console.error('Erro ao enviar feedback:', erro);
+    alert('❌ Erro ao enviar feedback. Tente novamente.');
+  }
+};
+
+// ========== NOVA FUNÇÃO: CARREGAR ROTAS PARA PASSAGEIRO ==========
+window.carregarRotasPassageiro = async function() {
+  const container = document.getElementById('rotasPassageiroContainer');
+  if (!container) return;
+  
+  showLoading('Carregando informações das rotas...');
+  
+  try {
+    // Buscar motoristas ativos
+    const q = query(collection(db, 'rotas_em_andamento'), 
+      where("ativo", "==", true),
+      where("online", "==", true)
+    );
+    const snapshot = await getDocs(q);
+    const motoristasAtivos = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // Agrupar motoristas por rota
+    const motoristasPorRota = {};
+    motoristasAtivos.forEach(motorista => {
+      if (motorista.rota && motorista.ativo !== false) {
+        if (!motoristasPorRota[motorista.rota]) {
+          motoristasPorRota[motorista.rota] = [];
+        }
+        motoristasPorRota[motorista.rota].push(motorista);
+      }
+    });
+    
+    // Criar HTML para todas as rotas
+    let html = '<div class="rotas-passageiro-grid">';
+    
+    ROTAS_DISPONIVEIS.forEach(rota => {
+      const motoristasNaRota = motoristasPorRota[rota.nome] || [];
+      const temMotorista = motoristasNaRota.length > 0;
+      
+      html += `
+        <div class="rota-passageiro-card ${temMotorista ? 'com-motorista' : 'sem-motorista'}">
+          <div class="rota-passageiro-header">
+            <div class="rota-passageiro-icon">
+              ${rota.tipo === 'adm' ? '🏢' : rota.tipo === 'retorno' ? '🔄' : '🚛'}
+            </div>
+            <div class="rota-passageiro-info">
+              <h4>${rota.nome}</h4>
+              <p class="rota-descricao">${rota.desc}</p>
+              <div class="rota-passageiro-status">
+                ${temMotorista ? 
+                  `<span class="status-online"><i class="fas fa-circle"></i> ${motoristasNaRota.length} motorista(s) ativo(s)</span>` :
+                  `<span class="status-offline"><i class="fas fa-circle"></i> Sem motoristas ativos</span>`
+                }
+              </div>
+            </div>
+          </div>
+          
+          ${temMotorista ? `
+            <div class="motoristas-na-rota">
+              <h5><i class="fas fa-users"></i> Motoristas ativos nesta rota:</h5>
+              ${motoristasNaRota.map(motorista => {
+                const ultimaAtualizacao = motorista.ultimaAtualizacao ? 
+                  new Date(motorista.ultimaAtualizacao.toDate()) : 
+                  new Date();
+                
+                const tempoDecorrido = calcularTempoDecorrido(ultimaAtualizacao);
+                const precisaoText = motorista.precisao ? 
+                  `Precisão: ${motorista.precisao.toFixed(0)}m` : '';
+                
+                return `
+                <div class="motorista-passageiro-item">
+                  <div class="motorista-info">
+                    <strong><i class="fas fa-user"></i> ${motorista.motorista}</strong>
+                    <span class="onibus-info">${motorista.onibus}</span>
+                  </div>
+                  <div class="motorista-detalhes">
+                    ${motorista.distancia ? `<span class="detalhe-item"><i class="fas fa-road"></i> ${motorista.distancia} km</span>` : ''}
+                    ${motorista.velocidade ? `<span class="detalhe-item"><i class="fas fa-tachometer-alt"></i> ${motorista.velocidade} km/h</span>` : ''}
+                    <span class="detalhe-item"><i class="fas fa-clock"></i> ${tempoDecorrido}</span>
+                    ${precisaoText ? `<span class="detalhe-item"><i class="fas fa-crosshairs"></i> ${precisaoText}</span>` : ''}
+                  </div>
+                  <div class="motorista-acoes">
+                    <button class="btn small" onclick="verLocalizacaoMotorista(${motorista.latitude}, ${motorista.longitude}, '${motorista.motorista}', '${motorista.onibus}')">
+                      <i class="fas fa-map-marker-alt"></i> Ver Mapa
+                    </button>
+                    <button class="btn small secondary" onclick="verDetalhesMotorista('${motorista.matricula}')">
+                      <i class="fas fa-info-circle"></i> Detalhes
+                    </button>
+                  </div>
+                </div>
+              `}).join('')}
+            </div>
+          ` : `
+            <div class="sem-motorista-message">
+              <p><i class="fas fa-info-circle"></i> Nenhum motorista ativo nesta rota no momento.</p>
+            </div>
+          `}
+          
+          <div class="rota-passageiro-actions">
+            <button class="btn secondary" onclick="abrirRotaNoMaps('${rota.nome}')">
+              <i class="fas fa-map"></i> Ver Rota no Maps
+            </button>
+            ${temMotorista ? `
+              <button class="btn" onclick="verTodosMotoristasRota('${rota.nome}')">
+                <i class="fas fa-eye"></i> Ver Todos os Motoristas
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Erro ao carregar rotas para passageiro:', error);
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <h4>Erro ao carregar rotas</h4>
+        <p>Não foi possível carregar as informações das rotas. Tente novamente mais tarde.</p>
+        <button class="btn btn-secondary" onclick="carregarRotasPassageiro()">
+          <i class="fas fa-redo"></i> Tentar Novamente
+        </button>
+      </div>
+    `;
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== FUNÇÃO PARA VER TODOS OS MOTORISTAS DE UMA ROTA ==========
+window.verTodosMotoristasRota = function(nomeRota) {
+  console.log('Ver todos os motoristas da rota:', nomeRota);
+  alert(`Motoristas na rota ${nomeRota}\n\nEsta funcionalidade mostrará todos os motoristas ativos nesta rota.`);
+};
+
+// ========== FUNÇÃO PARA VER DETALHES DO MOTORISTA ==========
+window.verDetalhesMotorista = async function(matricula) {
+  try {
+    showLoading('Carregando detalhes do motorista...');
+    
+    const q = query(collection(db, 'rotas_em_andamento'), 
+      where("matricula", "==", matricula),
+      where("ativo", "==", true)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      alert('Motorista não encontrado ou não está ativo.');
+      hideLoading();
+      return;
+    }
+    
+    const motorista = snapshot.docs[0].data();
+    const ultimaAtualizacao = motorista.ultimaAtualizacao ? 
+      new Date(motorista.ultimaAtualizacao.toDate()) : 
+      new Date();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-back';
+    modal.innerHTML = `
+      <div class="modal">
+        <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        <h3><i class="fas fa-user-circle"></i> Detalhes do Motorista</h3>
+        
+        <div class="motorista-detalhes-modal">
+          <div class="motorista-info-modal">
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-user"></i> Nome:</span>
+              <span class="info-value">${motorista.motorista}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-id-card"></i> Matrícula:</span>
+              <span class="info-value">${motorista.matricula}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-bus"></i> Ônibus:</span>
+              <span class="info-value">${motorista.onibus}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-route"></i> Rota:</span>
+              <span class="info-value">${motorista.rota}</span>
+            </div>
+            ${motorista.tag_ac ? `
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-tag"></i> TAG AC:</span>
+              <span class="info-value">${motorista.tag_ac}</span>
+            </div>
+            ` : ''}
+            ${motorista.distancia ? `
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-road"></i> Distância:</span>
+              <span class="info-value">${motorista.distancia} km rodados</span>
+            </div>
+            ` : ''}
+            ${motorista.velocidade ? `
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-tachometer-alt"></i> Velocidade:</span>
+              <span class="info-value">${motorista.velocidade} km/h</span>
+            </div>
+            ` : ''}
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-clock"></i> Última atualização:</span>
+              <span class="info-value">${ultimaAtualizacao.toLocaleTimeString()}</span>
+            </div>
+            ${motorista.precisao ? `
+            <div class="info-item">
+              <span class="info-label"><i class="fas fa-crosshairs"></i> Precisão GPS:</span>
+              <span class="info-value">${motorista.precisao.toFixed(0)} metros</span>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div class="motorista-acoes-modal">
+            <button class="btn" onclick="verLocalizacaoMotorista(${motorista.latitude}, ${motorista.longitude}, '${motorista.motorista}', '${motorista.onibus}')">
+              <i class="fas fa-map-marker-alt"></i> Ver no Mapa
+            </button>
+            <button class="btn secondary" onclick="abrirRotaNoMaps('${motorista.rota}')">
+              <i class="fas fa-route"></i> Ver Rota
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+  } catch (error) {
+    console.error('Erro ao carregar detalhes do motorista:', error);
+    alert('Erro ao carregar detalhes do motorista.');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== MONITORAMENTO PARA PASSAGEIRO (ATUALIZADO) ==========
 function iniciarMonitoramentoPassageiro() {
   if (estadoApp.unsubscribeRotas) return;
   
@@ -439,25 +1095,76 @@ function iniciarMonitoramentoPassageiro() {
     const container = document.getElementById('rotasAtivasList');
     if (!container) return;
     
-    const rotasAtivas = rotas.filter(r => r.ativo !== false);
+    const rotasAtivas = rotas.filter(r => r.ativo !== false && r.online !== false);
     
     if (rotasAtivas.length === 0) {
-      container.innerHTML = '<p>Nenhuma rota ativa no momento</p>';
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-bus-slash"></i></div>
+          <h4>Nenhuma rota ativa no momento</h4>
+          <p>Não há motoristas compartilhando localização no momento.</p>
+          <button class="btn btn-secondary" onclick="mostrarTela('tela-rotas-passageiro')">
+            <i class="fas fa-route"></i> Ver Todas as Rotas
+          </button>
+        </div>
+      `;
       return;
     }
     
-    container.innerHTML = rotasAtivas.map(rota => `
-      <div class="rota-ativa">
-        <strong>${rota.rota}</strong>
-        <small>Motorista: ${rota.motorista}</small>
-        <small>Última atualização: ${new Date(rota.timestamp?.toDate()).toLocaleTimeString()}</small>
-        <button class="btn small" onclick="abrirMapaPassageiro(${rota.latitude}, ${rota.longitude})">
-          Ver no mapa
-        </button>
+    // Agrupar por rota
+    const rotasAgrupadas = {};
+    rotasAtivas.forEach(rota => {
+      if (!rotasAgrupadas[rota.rota]) {
+        rotasAgrupadas[rota.rota] = [];
+      }
+      rotasAgrupadas[rota.rota].push(rota);
+    });
+    
+    // Ordenar rotas: ADM primeiro, depois operacionais, depois retorno
+    const rotasOrdenadas = Object.entries(rotasAgrupadas).sort(([a], [b]) => {
+      const tipoA = a.includes('ADM') ? 0 : a.includes('RETORNO') ? 2 : 1;
+      const tipoB = b.includes('ADM') ? 0 : b.includes('RETORNO') ? 2 : 1;
+      return tipoA - tipoB;
+    });
+    
+    container.innerHTML = rotasOrdenadas.map(([nomeRota, motoristas]) => `
+      <div class="rota-grupo">
+        <h4><i class="fas fa-route"></i> ${nomeRota}</h4>
+        ${motoristas.map(motorista => {
+          const ultimaAtualizacao = motorista.ultimaAtualizacao ? 
+            new Date(motorista.ultimaAtualizacao.toDate()) : 
+            new Date();
+          
+          return `
+          <div class="motorista-card">
+            <div class="motorista-info">
+              <div class="motorista-header">
+                <strong><i class="fas fa-user"></i> ${motorista.motorista}</strong>
+                <span class="onibus-badge">${motorista.onibus}</span>
+              </div>
+              <div class="motorista-detalhes">
+                <span class="detalhe-item"><i class="fas fa-road"></i> ${motorista.distancia || '0'} km</span>
+                <span class="detalhe-item"><i class="fas fa-tachometer-alt"></i> ${motorista.velocidade || '0'} km/h</span>
+                <span class="detalhe-item"><i class="fas fa-clock"></i> ${ultimaAtualizacao.toLocaleTimeString()}</span>
+                ${motorista.precisao ? `<span class="detalhe-item"><i class="fas fa-crosshairs"></i> ${motorista.precisao.toFixed(0)}m</span>` : ''}
+              </div>
+            </div>
+            <div class="motorista-actions">
+              <button class="btn small" onclick="verLocalizacaoMotorista(${motorista.latitude}, ${motorista.longitude}, '${motorista.motorista}', '${motorista.onibus}')">
+                <i class="fas fa-map-marker-alt"></i> Mapa
+              </button>
+              <button class="btn small secondary" onclick="abrirRotaNoMaps('${motorista.rota}')">
+                <i class="fas fa-route"></i> Rota
+              </button>
+            </div>
+          </div>
+        `}).join('')}
       </div>
     `).join('');
   });
 }
+
+// ========== FUNÇÕES RESTANTES (MANTIDAS IGUAIS) ==========
 
 function iniciarMonitoramentoAdmin() {
   if (estadoApp.unsubscribeRotas) return;
@@ -465,50 +1172,2045 @@ function iniciarMonitoramentoAdmin() {
   estadoApp.unsubscribeRotas = monitorarRotas((rotas) => {
     const container = document.getElementById('adminRotasList');
     const countElement = document.getElementById('rotasAtivasCount');
+    const motoristasAtivosElement = document.getElementById('motoristasAtivosCount');
     
     if (!container) return;
     
-    const rotasAtivas = rotas.filter(r => r.ativo !== false);
+    const rotasAtivas = rotas.filter(r => r.ativo !== false && r.online !== false);
     
     if (countElement) {
       countElement.textContent = rotasAtivas.length;
     }
     
+    if (motoristasAtivosElement) {
+      const motoristasUnicos = [...new Set(rotasAtivas.map(r => r.matricula))];
+      motoristasAtivosElement.textContent = motoristasUnicos.length;
+    }
+    
     if (rotasAtivas.length === 0) {
-      container.innerHTML = '<p>Nenhuma rota ativa no momento</p>';
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🚛</div>
+          <h4>Nenhuma rota ativa</h4>
+          <p>Nenhum motorista está compartilhando localização no momento.</p>
+        </div>
+      `;
       return;
     }
     
     container.innerHTML = rotasAtivas.map(rota => `
-      <div class="rota-admin">
-        <div class="rota-info">
-          <strong>${rota.rota}</strong>
-          <div class="rota-detalhes">
-            <span>Motorista: ${rota.motorista} (${rota.matricula})</span>
-            <span>Localização: ${rota.latitude?.toFixed(4)}, ${rota.longitude?.toFixed(4)}</span>
-            <span>Última atualização: ${new Date(rota.timestamp?.toDate()).toLocaleTimeString()}</span>
-            ${rota.velocidade ? `<span>Velocidade: ${(rota.velocidade * 3.6).toFixed(1)} km/h</span>` : ''}
+      <div class="rota-admin-card ${rota.velocidade > 100 ? 'velocidade-alta' : ''}">
+        <div class="rota-admin-header">
+          <div>
+            <strong>${rota.rota}</strong>
+            <span class="onibus-tag">${rota.onibus} (${rota.tag_ac})</span>
+          </div>
+          <span class="status-badge ${rota.velocidade > 100 ? 'alerta' : 'ativo'}">
+            ${rota.velocidade > 100 ? '⚡' : '✅'} ${rota.velocidade ? rota.velocidade + ' km/h' : 'Ativo'}
+          </span>
+        </div>
+        
+        <div class="rota-admin-info">
+          <div class="info-row">
+            <span>👤 Motorista:</span>
+            <span>${rota.motorista} (${rota.matricula})</span>
+          </div>
+          <div class="info-row">
+            <span>📍 Localização:</span>
+            <span>${rota.latitude?.toFixed(6)}, ${rota.longitude?.toFixed(6)}</span>
+          </div>
+          <div class="info-row">
+            <span>📏 Distância:</span>
+            <span>${rota.distancia || '0'} km rodados</span>
+          </div>
+          <div class="info-row">
+            <span>⏱️ Última atualização:</span>
+            <span>${rota.ultimaAtualizacao ? new Date(rota.ultimaAtualizacao.toDate()).toLocaleTimeString() : '--:--'}</span>
+          </div>
+          <div class="info-row">
+            <span>🎯 Precisão:</span>
+            <span>${rota.precisao ? rota.precisao.toFixed(0) + 'm' : '--'}</span>
           </div>
         </div>
-        <button class="btn small" onclick="abrirMapaAdmin(${rota.latitude}, ${rota.longitude})">
-          Mapa
-        </button>
+        
+        <div class="rota-admin-actions">
+          <button class="btn small" onclick="verMapaAdmin(${rota.latitude}, ${rota.longitude})">
+            🗺️ Ver Mapa
+          </button>
+          <button class="btn small secondary" onclick="verDetalhesRota('${rota.matricula}')">
+            📊 Detalhes
+          </button>
+          <button class="btn small warning" onclick="enviarNotificacaoMotorista('${rota.matricula}')">
+            📢 Notificar
+          </button>
+        </div>
       </div>
     `).join('');
   });
 }
 
-window.abrirMapaPassageiro = function(lat, lng) {
-  const url = `https://www.google.com/maps?q=${lat},${lng}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
+function iniciarMonitoramentoEmergencias() {
+  if (estadoApp.unsubscribeEmergencias) return;
+  
+  estadoApp.unsubscribeEmergencias = monitorarEmergencias((emergencias) => {
+    const container = document.getElementById('emergenciasList');
+    const countElement = document.getElementById('emergenciasCount');
+    
+    if (!container) return;
+    
+    const emergenciasAtivas = emergencias.filter(e => e.status === 'pendente');
+    
+    if (countElement) {
+      countElement.textContent = emergenciasAtivas.length;
+    }
+    
+    if (emergenciasAtivas.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">✅</div>
+          <h4>Nenhuma emergência ativa</h4>
+          <p>Todas as situações estão sob controle.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = emergenciasAtivas.map(emergencia => `
+      <div class="emergencia-card">
+        <div class="emergencia-header">
+          <div class="emergencia-titulo">
+            <span class="emergencia-icon">🚨</span>
+            <strong>${emergencia.tipo}</strong>
+          </div>
+          <span class="tempo-decorrido">${calcularTempoDecorrido(emergencia.timestamp)}</span>
+        </div>
+        
+        <div class="emergencia-info">
+          <div class="info-row">
+            <span>👤 Motorista:</span>
+            <span>${emergencia.motorista} (${emergencia.matricula})</span>
+          </div>
+          <div class="info-row">
+            <span>🚌 Ônibus:</span>
+            <span>${emergencia.onibus}</span>
+          </div>
+          <div class="info-row">
+            <span>🗺️ Rota:</span>
+            <span>${emergencia.rota}</span>
+          </div>
+          <div class="info-row">
+            <span>📝 Descrição:</span>
+            <span>${emergencia.descricao}</span>
+          </div>
+        </div>
+        
+        <div class="emergencia-actions">
+          <button class="btn small success" onclick="resolverEmergenciaAdmin('${emergencia.id}')">
+            ✅ Resolver
+          </button>
+          <button class="btn small" onclick="contatarMotoristaAdmin('${emergencia.matricula}')">
+            📞 Contatar
+          </button>
+          <button class="btn small warning" onclick="verLocalizacaoEmergencia('${emergencia.id}')">
+            📍 Localização
+          </button>
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
+function iniciarMonitoramentoFeedbacks() {
+  if (estadoApp.unsubscribeFeedbacks) return;
+  
+  estadoApp.unsubscribeFeedbacks = monitorarFeedbacks((feedbacks) => {
+    const container = document.getElementById('feedbacksList');
+    const countElement = document.getElementById('feedbacksCount');
+    
+    if (!container) return;
+    
+    const feedbacksPendentes = feedbacks.filter(f => f.status === 'pendente');
+    
+    if (countElement) {
+      countElement.textContent = feedbacksPendentes.length;
+    }
+    
+    if (feedbacksPendentes.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">💭</div>
+          <h4>Nenhum feedback pendente</h4>
+          <p>Todos os feedbacks foram revisados.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = feedbacksPendentes.map(feedback => `
+      <div class="feedback-card">
+        <div class="feedback-header">
+          <div>
+            <span class="feedback-perfil">${feedback.perfil === 'motorista' ? '👤 Motorista' : '🧍 Passageiro'}</span>
+            <span class="feedback-tipo ${feedback.tipo}">${feedback.tipo}</span>
+          </div>
+          <span class="tempo-decorrido">${calcularTempoDecorrido(feedback.timestamp)}</span>
+        </div>
+        
+        <div class="feedback-mensagem">
+          <p>${feedback.mensagem}</p>
+        </div>
+        
+        ${feedback.motorista ? `
+        <div class="feedback-info">
+          <small>👤 ${feedback.motorista} ${feedback.matricula ? `(${feedback.matricula})` : ''}</small>
+        </div>
+        ` : ''}
+        
+        <div class="feedback-actions">
+          <button class="btn small success" onclick="resolverFeedbackAdmin('${feedback.id}')">
+            ✅ Resolver
+          </button>
+          <button class="btn small" onclick="responderFeedbackAdmin('${feedback.id}')">
+            💬 Responder
+          </button>
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
+function iniciarMonitoramentoAvisos() {
+  if (estadoApp.unsubscribeAvisos) return;
+  
+  estadoApp.unsubscribeAvisos = monitorarAvisos((avisos) => {
+    estadoApp.avisosAtivos = avisos;
+    
+    const avisosCount = document.getElementById('avisosCount');
+    if (avisosCount) {
+      avisosCount.textContent = avisos.length;
+      avisosCount.style.display = avisos.length > 0 ? 'inline' : 'none';
+    }
+  });
+}
+
+// ========== MONITORAMENTO DE USUÁRIOS ONLINE ==========
+function iniciarMonitoramentoOnline() {
+  setInterval(async () => {
+    await atualizarOnlineUsers();
+  }, 30000);
+  
+  atualizarOnlineUsers();
+}
+
+async function atualizarOnlineUsers() {
+  try {
+    const snapshot = await getDocs(collection(db, 'rotas_em_andamento'));
+    const onlineUsers = snapshot.docs
+      .filter(doc => {
+        const data = doc.data();
+        return data.online === true && data.ativo !== false;
+      })
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    
+    estadoApp.onlineUsers = onlineUsers;
+    
+    const usuariosOnlineElement = document.getElementById('usuariosOnline');
+    if (usuariosOnlineElement) {
+      usuariosOnlineElement.textContent = onlineUsers.length;
+    }
+    
+    if (document.getElementById('tela-relatorios')?.classList.contains('ativa')) {
+      atualizarListaOnlineUsers();
+    }
+  } catch (error) {
+    console.error('Erro ao buscar usuários online:', error);
+  }
+}
+
+function atualizarListaOnlineUsers() {
+  const container = document.getElementById('onlineUsersList');
+  if (!container) return;
+  
+  if (estadoApp.onlineUsers.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-users-slash"></i>
+        <h4>Nenhum usuário online</h4>
+        <p>Nenhum motorista está ativo no momento.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="online-user-list">
+      ${estadoApp.onlineUsers.map(user => `
+        <div class="online-user-item">
+          <span class="online-dot"></span>
+          <div class="user-info">
+            <strong>${user.motorista}</strong>
+            <small>${user.onibus} • ${user.rota}</small>
+          </div>
+          <small>${user.ultimaAtualizacao ? new Date(user.ultimaAtualizacao.toDate()).toLocaleTimeString() : ''}</small>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ========== FUNÇÕES AUXILIARES ==========
+function calcularTempoDecorrido(timestamp) {
+  if (!timestamp) return 'Agora mesmo';
+  
+  const agora = new Date();
+  const data = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const diffMs = agora - data;
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) return 'Agora mesmo';
+  if (diffMins < 60) return `${diffMins} min atrás`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h atrás`;
+  
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d atrás`;
+}
+
+// ========== NAVEGAÇÃO ENTRE TELAS ==========
+window.mostrarTela = function(id) {
+  console.log('🔄 Mostrando tela:', id);
+  
+  document.querySelectorAll('.tela').forEach(tela => {
+    tela.classList.add('hidden');
+    tela.classList.remove('ativa');
+  });
+  
+  const alvo = document.getElementById(id);
+  if (!alvo) {
+    console.error('Tela não encontrada:', id);
+    return;
+  }
+  
+  alvo.classList.remove('hidden');
+  alvo.classList.add('ativa');
+  
+  switch(id) {
+    case 'tela-rotas':
+      setTimeout(() => carregarRotas(), 100);
+      break;
+    case 'tela-passageiro':
+      iniciarMonitoramentoPassageiro();
+      break;
+    case 'tela-admin-dashboard':
+      iniciarMonitoramentoAdmin();
+      break;
+    case 'tela-motorista':
+      atualizarInfoMotorista();
+      break;
+    case 'tela-rotas-passageiro':
+      carregarRotasPassageiro();
+      break;
+    case 'tela-relatorios':
+      carregarRelatorios();
+      atualizarListaOnlineUsers();
+      break;
+    case 'tela-escala':
+      if (estadoApp.escalaMotorista) {
+        atualizarTelaEscala(estadoApp.escalaMotorista);
+      }
+      break;
+  }
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.abrirMapaAdmin = function(lat, lng) {
+function atualizarInfoMotorista() {
+  if (!estadoApp.motorista) return;
+  
+  const nomeElement = document.getElementById('motoristaNome');
+  const matriculaElement = document.getElementById('motoristaMatricula');
+  
+  if (nomeElement) nomeElement.textContent = estadoApp.motorista.nome;
+  if (matriculaElement) matriculaElement.textContent = estadoApp.motorista.matricula;
+  
+  const userInfo = document.querySelector('.user-info');
+  if (userInfo && !document.querySelector('.user-tags')) {
+    const tagsDiv = document.createElement('div');
+    tagsDiv.className = 'user-tags';
+    userInfo.appendChild(tagsDiv);
+    atualizarInfoOnibus();
+  }
+}
+
+// ========== CARREGAMENTO DE ROTAS PARA MOTORISTA ==========
+function carregarRotas() {
+  const container = document.getElementById('routesContainer');
+  if (!container) {
+    console.error('Container de rotas não encontrado');
+    return;
+  }
+  
+  const motoristaLogado = !!estadoApp.motorista;
+  const onibusSelecionado = !!estadoApp.onibusAtivo;
+  
+  container.innerHTML = ROTAS_DISPONIVEIS.map(rota => `
+    <div class="route-item ${rota.tipo}" data-tipo="${rota.tipo}">
+      <div class="route-info">
+        <div class="route-header">
+          <span class="route-icon">${rota.tipo === 'adm' ? '🏢' : rota.tipo === 'retorno' ? '🔄' : '🚛'}</span>
+          <div>
+            <div class="route-nome">${rota.nome}</div>
+            <small class="route-desc">${rota.desc}</small>
+          </div>
+        </div>
+        <div class="route-status" id="status-${rota.id}">
+          <small>🔄 Verificando motoristas...</small>
+        </div>
+      </div>
+      <div class="route-actions">
+        ${motoristaLogado && onibusSelecionado ? `
+          <button class="btn" onclick="iniciarRota('${rota.nome}')">
+            ▶️ Iniciar Rota
+          </button>
+        ` : `
+          <button class="btn disabled" disabled title="Selecione um ônibus primeiro">
+            ⚠️ Selecione ônibus
+          </button>
+        `}
+        <button class="btn secondary" onclick="abrirRotaNoMaps('${rota.nome}')">
+          🗺️ Abrir Rota
+        </button>
+        <button class="btn outline" onclick="verMotoristasNaRota('${rota.nome}')">
+          👁️ Ver Motoristas
+        </button>
+      </div>
+    </div>
+  `).join('');
+  
+  verificarMotoristasPorRota();
+}
+
+async function verificarMotoristasPorRota() {
+  const q = query(collection(db, 'rotas_em_andamento'), where("ativo", "==", true));
+  const snapshot = await getDocs(q);
+  const rotasAtivas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  rotasAtivas.forEach(rota => {
+    const statusElement = document.getElementById(`status-${rota.id}`);
+    if (statusElement) {
+      statusElement.innerHTML = `
+        <small>✅ <strong>${rota.motorista}</strong> no ônibus ${rota.onibus}</small>
+        <small>📏 ${rota.distancia || '0'} km rodados</small>
+        <small>📍 ${rota.velocidade ? rota.velocidade + ' km/h' : 'Ativo'}</small>
+      `;
+    }
+  });
+  
+  document.querySelectorAll('.route-item').forEach(item => {
+    const routeId = item.querySelector('.route-status')?.id.replace('status-', '');
+    if (routeId && !rotasAtivas.find(r => r.id === routeId)) {
+      const statusElement = document.getElementById(`status-${routeId}`);
+      if (statusElement) {
+        statusElement.innerHTML = `<small>⏳ Nenhum motorista ativo</small>`;
+      }
+    }
+  });
+}
+
+// ========== FUNÇÕES DE MAPA ==========
+window.abrirRotaNoMaps = function(nomeRota) {
+  const rotas = {
+    'ROTA ADM 01': 'https://www.google.com/maps/d/u/1/edit?mid=18BCgBpobp1Olzmzy0RnPCUEd7Vnkc5s&usp=sharing',
+    'ROTA ADM 02': 'https://www.google.com/maps/d/u/1/edit?mid=1WxbIX8nw0xyGBLMvvi1SF3DRuwmZ5oM&usp=sharing',
+    'ROTA 01': 'https://www.google.com/maps/d/u/1/edit?mid=1jCfFxq1ZwecS2IcHy7xGFLLgttsM-RQ&usp=sharing',
+    'ROTA 02': 'https://www.google.com/maps/d/u/1/edit?mid=1LCvNJxWBbZ_chpbdn_lk_Dm6NPA194g&usp=sharing',
+    'ROTA 03': 'https://www.google.com/maps/d/u/1/edit?mid=1bdwkrClh5AZml0mnDGlOzYcaR4w1BL0&usp=sharing',
+    'ROTA 04': 'https://www.google.com/maps/d/u/1/edit?mid=1ejibzdZkhX2QLnP9YgvvHdQpZELFvXo&usp=sharing',
+    'ROTA 05': 'https://www.google.com/maps/d/u/1/edit?mid=1L9xjAWFUupMc7eQbqVJz-SNWlYX5SHo&usp=sharing',
+    'RETORNO OVERLAND - ROTA 01': 'https://www.google.com/maps/d/u/1/edit?mid=1ClQVIaRLOYYWHU7fvP87r1BVy85a_eg&usp=sharing',
+    'RETORNO OVERLAND - ROTA 02': 'https://www.google.com/maps/d/u/1/edit?mid=1WOIMgeLgV01B8yk7HoX6tazdCHXQnok&usp=sharing'
+  };
+  
+  const url = rotas[nomeRota];
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } else {
+    alert('Rota não encontrada');
+  }
+};
+
+window.verLocalizacaoMotorista = function(lat, lng, motorista, onibus) {
+  const url = `https://www.google.com/maps?q=${lat},${lng}&z=15`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+  
+  mostrarNotificacao('📍 Localização', `Abrindo localização de ${motorista} (${onibus})`);
+};
+
+window.verMapaAdmin = function(lat, lng) {
   const url = `https://www.google.com/maps/@${lat},${lng},15z`;
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
-// ========== FUNÇÕES DE TEMA ESCURO ==========
+window.verMotoristasNaRota = async function(nomeRota) {
+  mostrarTela('tela-ver-motoristas');
+  
+  try {
+    const q = query(collection(db, 'rotas_em_andamento'), 
+      where("ativo", "==", true),
+      where("rota", "==", nomeRota)
+    );
+    
+    const snapshot = await getDocs(q);
+    const motoristas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const container = document.getElementById('motoristasContainer');
+    if (!container) return;
+    
+    if (motoristas.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-users-slash"></i>
+          <h4>Nenhum motorista ativo</h4>
+          <p>Não há motoristas compartilhando localização nesta rota no momento.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = motoristas.map(motorista => `
+      <div class="motorista-detalhe-card">
+        <div class="motorista-detalhe-header">
+          <div class="motorista-avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="motorista-info-detalhe">
+            <h4>${motorista.motorista}</h4>
+            <p>Matrícula: ${motorista.matricula}</p>
+            <span class="onibus-badge">${motorista.onibus}</span>
+          </div>
+        </div>
+        
+        <div class="motorista-detalhe-info">
+          <div class="info-row">
+            <span><i class="fas fa-route"></i> Rota:</span>
+            <span>${motorista.rota}</span>
+          </div>
+          <div class="info-row">
+            <span><i class="fas fa-road"></i> Distância:</span>
+            <span>${motorista.distancia || '0'} km rodados</span>
+          </div>
+          <div class="info-row">
+            <span><i class="fas fa-tachometer-alt"></i> Velocidade:</span>
+            <span>${motorista.velocidade || '0'} km/h</span>
+          </div>
+          <div class="info-row">
+            <span><i class="fas fa-clock"></i> Última atualização:</span>
+            <span>${motorista.ultimaAtualizacao ? new Date(motorista.ultimaAtualizacao.toDate()).toLocaleTimeString() : '--:--'}</span>
+          </div>
+          <div class="info-row">
+            <span><i class="fas fa-map-marker-alt"></i> Localização:</span>
+            <span>${motorista.latitude?.toFixed(4)}, ${motorista.longitude?.toFixed(4)}</span>
+          </div>
+        </div>
+        
+        <div class="motorista-detalhe-actions">
+          <button class="btn" onclick="verLocalizacaoMotorista(${motorista.latitude}, ${motorista.longitude}, '${motorista.motorista}', '${motorista.onibus}')">
+            <i class="fas fa-map"></i> Ver Mapa
+          </button>
+          <button class="btn secondary" onclick="abrirRotaNoMaps('${motorista.rota}')">
+            <i class="fas fa-route"></i> Ver Rota
+          </button>
+        </div>
+      </div>
+    `).join('');
+    
+  } catch (error) {
+    console.error('Erro ao carregar motoristas:', error);
+  }
+};
+
+// ========== NOTIFICAÇÕES ==========
+function mostrarNotificacao(titulo, mensagem) {
+  if (!("Notification" in window)) {
+    console.log("Este navegador não suporta notificações desktop");
+    return;
+  }
+  
+  if (Notification.permission === "granted") {
+    criarNotificacao(titulo, mensagem);
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        criarNotificacao(titulo, mensagem);
+      }
+    });
+  }
+  
+  criarNotificacaoTela(titulo, mensagem);
+}
+
+function criarNotificacao(titulo, mensagem) {
+  const notification = new Notification(titulo, {
+    body: mensagem,
+    icon: 'logo.jpg',
+    tag: 'ac-transporte'
+  });
+  
+  notification.onclick = function() {
+    window.focus();
+    this.close();
+  };
+}
+
+function criarNotificacaoTela(titulo, mensagem) {
+  const notificacao = document.createElement('div');
+  notificacao.className = 'notificacao-tela';
+  notificacao.innerHTML = `
+    <div class="notificacao-conteudo">
+      <strong>${titulo}</strong>
+      <p>${mensagem}</p>
+    </div>
+    <button onclick="this.parentElement.remove()">✕</button>
+  `;
+  
+  document.body.appendChild(notificacao);
+  
+  setTimeout(() => {
+    if (notificacao.parentElement) {
+      notificacao.remove();
+    }
+  }, 5000);
+}
+
+// ========== FUNÇÕES ADMIN ==========
+window.enviarNotificacaoGeral = async function() {
+  const titulo = document.getElementById('notificacaoTitulo').value;
+  const mensagem = document.getElementById('notificacaoMensagem').value;
+  const destino = document.getElementById('notificacaoDestino').value;
+  
+  if (!titulo || !mensagem) {
+    alert('Preencha título e mensagem');
+    return;
+  }
+  
+  try {
+    await registrarAviso({
+      titulo: titulo,
+      mensagem: mensagem,
+      destino: destino,
+      ativo: true,
+      timestamp: new Date()
+    });
+    
+    document.getElementById('notificacaoTitulo').value = '';
+    document.getElementById('notificacaoMensagem').value = '';
+    
+    mostrarNotificacao('📢 Notificação Enviada', `Notificação enviada para ${destino}`);
+    
+  } catch (erro) {
+    console.error('Erro ao enviar notificação:', erro);
+    alert('❌ Erro ao enviar notificação');
+  }
+};
+
+// ========== GESTÃO DE AVISOS (ADMIN) ==========
+window.gerenciarAvisos = async function() {
+  try {
+    showLoading('Carregando avisos...');
+    
+    const avisos = await getAvisos();
+    estadoApp.avisosAtivos = avisos;
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-back';
+    modal.innerHTML = `
+      <div class="modal large">
+        <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        <h3><i class="fas fa-bullhorn"></i> Gerenciar Avisos</h3>
+        
+        <div class="admin-actions-bar">
+          <button class="btn success" onclick="criarNovoAviso()">
+            <i class="fas fa-plus"></i> Novo Aviso
+          </button>
+        </div>
+        
+        <div class="avisos-admin-list">
+          ${avisos.length === 0 ? `
+            <div class="empty-state">
+              <i class="fas fa-bullhorn"></i>
+              <h4>Nenhum aviso cadastrado</h4>
+              <p>Clique em "Novo Aviso" para criar o primeiro.</p>
+            </div>
+          ` : avisos.map(aviso => `
+            <div class="aviso-admin-item" id="aviso-${aviso.id}">
+              <div class="aviso-admin-header">
+                <div>
+                  <h4>${aviso.titulo}</h4>
+                  <small class="aviso-destino-badge">Para: ${aviso.destino || 'Todos'}</small>
+                  <small class="aviso-data">${aviso.timestamp ? new Date(aviso.timestamp.toDate()).toLocaleString() : ''}</small>
+                </div>
+                <div class="aviso-admin-actions">
+                  <button class="icon-btn" onclick="editarAviso('${aviso.id}')" title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="icon-btn danger" onclick="excluirAviso('${aviso.id}')" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="aviso-admin-content">
+                <p>${aviso.mensagem}</p>
+                <div class="aviso-status">
+                  <span class="status-badge ${aviso.ativo ? 'ativo' : 'inativo'}">
+                    ${aviso.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+  } catch (erro) {
+    console.error('Erro ao carregar avisos:', erro);
+    alert('❌ Erro ao carregar avisos');
+  } finally {
+    hideLoading();
+  }
+};
+
+window.criarNovoAviso = function() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-back';
+  modal.innerHTML = `
+    <div class="modal">
+      <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+      <h3><i class="fas fa-plus"></i> Criar Novo Aviso</h3>
+      
+      <div class="form-group">
+        <label>Título *</label>
+        <input type="text" id="novoAvisoTitulo" class="form-input" placeholder="Título do aviso" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Mensagem *</label>
+        <textarea id="novoAvisoMensagem" class="form-input" rows="4" placeholder="Mensagem do aviso" required></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Destino</label>
+        <select id="novoAvisoDestino" class="form-input">
+          <option value="todos">Todos</option>
+          <option value="motoristas">Motoristas</option>
+          <option value="passageiros">Passageiros</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="novoAvisoAtivo" checked> Aviso ativo
+        </label>
+      </div>
+      
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="salvarNovoAviso()">
+          <i class="fas fa-save"></i> Salvar Aviso
+        </button>
+        <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  modal.style.display = 'flex';
+};
+
+window.salvarNovoAviso = async function() {
+  const titulo = document.getElementById('novoAvisoTitulo').value;
+  const mensagem = document.getElementById('novoAvisoMensagem').value;
+  const destino = document.getElementById('novoAvisoDestino').value;
+  const ativo = document.getElementById('novoAvisoAtivo').checked;
+  
+  if (!titulo || !mensagem) {
+    alert('Preencha título e mensagem');
+    return;
+  }
+  
+  try {
+    showLoading('Salvando aviso...');
+    
+    await registrarAviso({
+      titulo: titulo,
+      mensagem: mensagem,
+      destino: destino,
+      ativo: ativo,
+      timestamp: new Date()
+    });
+    
+    mostrarNotificacao('✅ Aviso Criado', 'Aviso criado com sucesso!');
+    
+    document.querySelector('.modal-back').remove();
+    gerenciarAvisos();
+    
+  } catch (erro) {
+    console.error('Erro ao salvar aviso:', erro);
+    alert('❌ Erro ao salvar aviso');
+  } finally {
+    hideLoading();
+  }
+};
+
+window.editarAviso = async function(avisoId) {
+  try {
+    showLoading('Carregando aviso...');
+    
+    const aviso = estadoApp.avisosAtivos.find(a => a.id === avisoId);
+    if (!aviso) {
+      alert('Aviso não encontrado');
+      return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-back';
+    modal.innerHTML = `
+      <div class="modal">
+        <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        <h3><i class="fas fa-edit"></i> Editar Aviso</h3>
+        
+        <div class="form-group">
+          <label>Título *</label>
+          <input type="text" id="editarAvisoTitulo" class="form-input" value="${aviso.titulo || ''}" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Mensagem *</label>
+          <textarea id="editarAvisoMensagem" class="form-input" rows="4" required>${aviso.mensagem || ''}</textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Destino</label>
+          <select id="editarAvisoDestino" class="form-input">
+            <option value="todos" ${aviso.destino === 'todos' ? 'selected' : ''}>Todos</option>
+            <option value="motoristas" ${aviso.destino === 'motoristas' ? 'selected' : ''}>Motoristas</option>
+            <option value="passageiros" ${aviso.destino === 'passageiros' ? 'selected' : ''}>Passageiros</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="editarAvisoAtivo" ${aviso.ativo ? 'checked' : ''}> Aviso ativo
+          </label>
+        </div>
+        
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="salvarEdicaoAviso('${avisoId}')">
+            <i class="fas fa-save"></i> Salvar Alterações
+          </button>
+          <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+  } catch (erro) {
+    console.error('Erro ao carregar aviso:', erro);
+    alert('❌ Erro ao carregar aviso');
+  } finally {
+    hideLoading();
+  }
+};
+
+window.salvarEdicaoAviso = async function(avisoId) {
+  const titulo = document.getElementById('editarAvisoTitulo').value;
+  const mensagem = document.getElementById('editarAvisoMensagem').value;
+  const destino = document.getElementById('editarAvisoDestino').value;
+  const ativo = document.getElementById('editarAvisoAtivo').checked;
+  
+  if (!titulo || !mensagem) {
+    alert('Preencha título e mensagem');
+    return;
+  }
+  
+  try {
+    showLoading('Salvando alterações...');
+    
+    await updateAviso(avisoId, {
+      titulo: titulo,
+      mensagem: mensagem,
+      destino: destino,
+      ativo: ativo,
+      timestamp: new Date()
+    });
+    
+    mostrarNotificacao('✅ Aviso Atualizado', 'Aviso atualizado com sucesso!');
+    
+    document.querySelector('.modal-back').remove();
+    gerenciarAvisos();
+    
+  } catch (erro) {
+    console.error('Erro ao atualizar aviso:', erro);
+    alert('❌ Erro ao atualizar aviso');
+  } finally {
+    hideLoading();
+  }
+};
+
+window.excluirAviso = async function(avisoId) {
+  if (!confirm('Tem certeza que deseja excluir este aviso?\n\nEsta ação não pode ser desfeita.')) {
+    return;
+  }
+  
+  try {
+    showLoading('Excluindo aviso...');
+    
+    await deleteAviso(avisoId);
+    
+    mostrarNotificacao('✅ Aviso Excluído', 'Aviso excluído com sucesso!');
+    
+    const avisoElement = document.getElementById(`aviso-${avisoId}`);
+    if (avisoElement) {
+      avisoElement.remove();
+    }
+    
+    if (document.querySelectorAll('.aviso-admin-item').length === 0) {
+      const container = document.querySelector('.avisos-admin-list');
+      if (container) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-bullhorn"></i>
+            <h4>Nenhum aviso cadastrado</h4>
+            <p>Clique em "Novo Aviso" para criar o primeiro.</p>
+          </div>
+        `;
+      }
+    }
+    
+  } catch (erro) {
+    console.error('Erro ao excluir aviso:', erro);
+    alert('❌ Erro ao excluir aviso');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== CARREGAR ESCALA DO MOTORISTA ==========
+async function carregarEscalaMotorista(matricula) {
+  try {
+    console.log('Buscando escala para matrícula:', matricula);
+    
+    const escalaMotorista = await getEscalaPorMatricula(matricula);
+    
+    if (escalaMotorista) {
+      console.log('Escala encontrada:', escalaMotorista);
+      estadoApp.escalaMotorista = escalaMotorista;
+      
+      mostrarNotificacao('✅ Escala Carregada', 'Sua escala foi carregada com sucesso!');
+      
+      return escalaMotorista;
+    } else {
+      console.log('Nenhuma escala encontrada para matrícula:', matricula);
+      
+      mostrarNotificacao('⚠️ Escala não encontrada', `Matrícula ${matricula} não possui escala cadastrada.`);
+      
+      return null;
+    }
+  } catch (erro) {
+    console.error('Erro ao carregar escala do motorista:', erro);
+    
+    mostrarNotificacao('❌ Erro', 'Não foi possível carregar sua escala. Tente novamente.');
+    
+    return null;
+  }
+}
+
+// ========== ESCALA COM IMAGEM ==========
+function atualizarTelaEscala(escala) {
+  const container = document.querySelector('.escala-dias');
+  if (!container) {
+    console.error('Container .escala-dias não encontrado');
+    return;
+  }
+  
+  if (!escala) {
+    console.error('Escala é undefined ou null');
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <i class="fas fa-exclamation-circle"></i>
+        <h4>Escala não disponível</h4>
+        <p>Não foi encontrada uma escala para sua matrícula.</p>
+        <p>Entre em contato com a administração.</p>
+      </div>
+    `;
+    return;
+  }
+
+  console.log('Atualizando tela com escala:', escala);
+  
+  // Verificar se tem imagem ou dados manuais
+  if (escala.imagemUrl) {
+    // Escala com imagem
+    container.innerHTML = `
+      <div class="escala-imagem-container">
+        <div class="escala-imagem-header">
+          <h4><i class="fas fa-image"></i> Escala em Imagem</h4>
+          <small>Clique na imagem para ampliar</small>
+        </div>
+        <div class="escala-imagem-wrapper">
+          <img 
+            src="${escala.imagemUrl}" 
+            alt="Escala de trabalho" 
+            class="escala-imagem"
+            onclick="ampliarImagemEscala('${escala.imagemUrl}')"
+          >
+        </div>
+        <div class="escala-imagem-info">
+          <p><i class="fas fa-info-circle"></i> Esta é a imagem da escala enviada pela administração.</p>
+          <p><strong>Última atualização:</strong> ${escala.dataAtualizacao ? new Date(escala.dataAtualizacao).toLocaleDateString('pt-BR') : 'Não informada'}</p>
+        </div>
+      </div>
+    `;
+  } else if (escala.dias && Array.isArray(escala.dias)) {
+    // Escala manual (mantida para compatibilidade)
+    const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    
+    container.innerHTML = `
+      <div class="escala-manual-container">
+        <div class="escala-manual-header">
+          <h4><i class="fas fa-calendar-alt"></i> Escala Manual</h4>
+          <small>Dados cadastrados manualmente</small>
+        </div>
+        <div class="escala-dias-grid">
+          ${diasSemana.map(dia => {
+            const diaEscala = escala.dias.find(d => d.dia && d.dia.trim().toLowerCase() === dia.toLowerCase());
+            
+            return `
+              <div class="dia-escala ${diaEscala ? '' : 'folga'}">
+                <div class="dia-nome">${dia}</div>
+                <div class="dia-info">
+                  ${diaEscala ? `
+                    <span class="turno ${getTurnoClass(diaEscala.horario)}">${diaEscala.horario || '00:00 - 00:00'}</span>
+                    <span class="rota">${diaEscala.rota || 'Sem rota'}</span>
+                    ${diaEscala.onibus ? `<small class="onibus-escala">${diaEscala.onibus}</small>` : ''}
+                  ` : `
+                    <span class="folga-text">FOLGA</span>
+                  `}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    // Sem escala
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <i class="fas fa-calendar-times" style="font-size: 48px; color: #ff6b6b; margin-bottom: 16px;"></i>
+        <h4>Nenhuma escala encontrada</h4>
+        <p>Não foi encontrada uma escala para sua matrícula.</p>
+        <p>Entre em contato com a administração para solicitar sua escala.</p>
+      </div>
+    `;
+  }
+  
+  // Informações do motorista
+  const infoHeader = document.querySelector('.escala-info');
+  if (infoHeader && !infoHeader.querySelector('.escala-motorista-info')) {
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'escala-motorista-info';
+    infoDiv.innerHTML = `
+      <div style="margin-bottom: 10px;">
+        <strong>Motorista:</strong> ${escala.motorista || 'Não informado'}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <strong>Matrícula:</strong> ${escala.matricula || 'Não informada'}
+      </div>
+      ${escala.periodo ? `
+        <div>
+          <strong>Período:</strong> ${escala.periodo}
+        </div>
+      ` : ''}
+      ${escala.dataAtualizacao ? `
+        <div>
+          <strong>Atualizada em:</strong> ${new Date(escala.dataAtualizacao).toLocaleDateString('pt-BR')}
+        </div>
+      ` : ''}
+    `;
+    infoHeader.appendChild(infoDiv);
+  }
+}
+
+function getTurnoClass(horario) {
+  if (!horario) return 'manha';
+  if (horario.includes('06:00')) return 'manha';
+  if (horario.includes('14:00')) return 'tarde';
+  if (horario.includes('22:00')) return 'noite';
+  return 'manha';
+}
+
+// Função para ampliar imagem da escala
+window.ampliarImagemEscala = function(imagemUrl) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-back';
+  modal.innerHTML = `
+    <div class="modal large imagem-modal">
+      <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+      <h3><i class="fas fa-expand"></i> Escala - Visualização Ampliada</h3>
+      <div class="imagem-ampliada-container">
+        <img src="${imagemUrl}" alt="Escala ampliada" class="imagem-ampliada">
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="downloadImagemEscala('${imagemUrl}')">
+          <i class="fas fa-download"></i> Baixar Imagem
+        </button>
+        <button class="btn secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+          <i class="fas fa-times"></i> Fechar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  modal.style.display = 'flex';
+};
+
+// Função para baixar imagem
+window.downloadImagemEscala = function(imagemUrl) {
+  const link = document.createElement('a');
+  link.href = imagemUrl;
+  link.download = `escala_${new Date().toISOString().split('T')[0]}.jpg`;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  mostrarNotificacao('✅ Download Iniciado', 'A imagem da escala está sendo baixada.');
+};
+
+// ========== GESTÃO DE ESCALAS COM IMAGEM (ADMIN) ==========
+window.gerenciarEscalas = async function() {
+  try {
+    showLoading('Carregando escalas...');
+    
+    await carregarEscalas();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-back xlarge';
+    modal.innerHTML = `
+      <div class="modal xxlarge">
+        <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        <h3><i class="fas fa-calendar-alt"></i> Gerenciar Escalas (por Imagem)</h3>
+        
+        <div class="admin-actions-bar">
+          <button class="btn success" onclick="criarNovaEscalaImagem()">
+            <i class="fas fa-plus"></i> Nova Escala com Imagem
+          </button>
+          <button class="btn info" onclick="exportarEscalasImagem()">
+            <i class="fas fa-download"></i> Exportar Lista
+          </button>
+        </div>
+        
+        <div class="escalas-admin-list-imagem">
+          ${estadoApp.escalas.length === 0 ? `
+            <div class="empty-state">
+              <i class="fas fa-calendar"></i>
+              <h4>Nenhuma escala cadastrada</h4>
+              <p>Clique em "Nova Escala com Imagem" para criar a primeira.</p>
+            </div>
+          ` : estadoApp.escalas.map(escala => `
+            <div class="escala-admin-item-imagem" id="escala-${escala.id}">
+              <div class="escala-admin-header">
+                <div>
+                  <h4>${escala.motorista || 'Sem nome'} - ${escala.matricula || 'Sem matrícula'}</h4>
+                  <div class="escala-info-badges">
+                    <span class="badge ${escala.imagemUrl ? 'success' : 'secondary'}">
+                      <i class="fas ${escala.imagemUrl ? 'fa-image' : 'fa-calendar-alt'}"></i>
+                      ${escala.imagemUrl ? 'Com Imagem' : 'Manual'}
+                    </span>
+                    <small class="escala-periodo">${escala.periodo || 'Sem período definido'}</small>
+                    ${escala.dataAtualizacao ? 
+                      `<small class="escala-timestamp">Atualizada: ${new Date(escala.dataAtualizacao).toLocaleDateString('pt-BR')}</small>` : 
+                      ''
+                    }
+                  </div>
+                </div>
+                <div class="escala-admin-actions">
+                  ${escala.imagemUrl ? `
+                    <button class="icon-btn" onclick="visualizarEscalaImagem('${escala.id}')" title="Visualizar Imagem">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  ` : ''}
+                  <button class="icon-btn" onclick="editarEscalaImagem('${escala.id}')" title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="icon-btn danger" onclick="excluirEscala('${escala.id}')" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              
+              ${escala.imagemUrl ? `
+                <div class="escala-imagem-preview">
+                  <img src="${escala.imagemUrl}" alt="Escala ${escala.motorista}" 
+                       onclick="visualizarEscalaImagem('${escala.id}')">
+                  <div class="escala-imagem-overlay">
+                    <i class="fas fa-search-plus"></i>
+                    <span>Clique para ampliar</span>
+                  </div>
+                </div>
+              ` : escala.dias && Array.isArray(escala.dias) ? `
+                <div class="escala-dias-admin">
+                  ${['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(dia => {
+                    const diaEscala = escala.dias.find(d => d.dia && d.dia.trim().toLowerCase() === dia.toLowerCase());
+                    return `
+                      <div class="dia-escala-admin ${diaEscala ? '' : 'folga'}">
+                        <div class="dia-nome-admin">${dia}</div>
+                        <div class="dia-info-admin">
+                          ${diaEscala ? `
+                            <span class="turno-admin ${getTurnoClass(diaEscala.horario)}">${diaEscala.horario || '00:00 - 00:00'}</span>
+                            <span class="rota-admin">${diaEscala.rota || 'Sem rota'}</span>
+                          ` : `
+                            <span class="folga-text-admin">FOLGA</span>
+                          `}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              ` : `
+                <div class="escala-sem-dados">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <p>Esta escala não possui dados visíveis.</p>
+                </div>
+              `}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+  } catch (erro) {
+    console.error('Erro ao carregar escalas:', erro);
+    alert('❌ Erro ao carregar escalas');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== CRIAR NOVA ESCALA COM IMAGEM ==========
+window.criarNovaEscalaImagem = function() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-back large';
+  modal.innerHTML = `
+    <div class="modal large">
+      <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+      <h3><i class="fas fa-plus"></i> Nova Escala com Imagem</h3>
+      
+      <div class="form-section">
+        <h4><i class="fas fa-user"></i> Dados do Motorista</h4>
+        <div class="form-group">
+          <label>Motorista *</label>
+          <input type="text" id="novaEscalaMotorista" class="form-input" placeholder="Nome completo do motorista" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Matrícula *</label>
+          <input type="text" id="novaEscalaMatricula" class="form-input" placeholder="Ex: AC1234" required>
+          <small class="form-help">Esta matrícula será usada para o motorista visualizar sua escala</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Período da Escala</label>
+          <input type="text" id="novaEscalaPeriodo" class="form-input" placeholder="Ex: 01/01/2024 a 31/01/2024">
+        </div>
+      </div>
+      
+      <div class="form-section">
+        <h4><i class="fas fa-image"></i> Imagem da Escala</h4>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <div class="upload-text">
+            <h4>Arraste e solte a imagem aqui</h4>
+            <p>ou clique para selecionar do dispositivo</p>
+            <p class="upload-info"><i class="fas fa-info-circle"></i> Formatos aceitos: JPG, PNG, PDF (até 5MB)</p>
+          </div>
+          <input type="file" id="novaEscalaImagem" accept="image/*,.pdf" style="display: none;">
+        </div>
+        
+        <div class="upload-preview" id="uploadPreview" style="display: none;">
+          <div class="preview-header">
+            <h4><i class="fas fa-file-image"></i> Pré-visualização</h4>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removerImagemEscala()">
+              <i class="fas fa-trash"></i> Remover
+            </button>
+          </div>
+          <div class="preview-content" id="previewContent">
+            <!-- Preview será inserido aqui -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="uploadImagemEscala()" id="btnUploadEscala">
+          <i class="fas fa-upload"></i> Upload e Salvar
+        </button>
+        <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  modal.style.display = 'flex';
+  
+  // Configurar área de upload
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('novaEscalaImagem');
+  const uploadPreview = document.getElementById('uploadPreview');
+  const previewContent = document.getElementById('previewContent');
+  
+  // Clique na área de upload
+  uploadArea.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  // Arrastar e soltar
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+  
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+  
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      handleFileSelect(fileInput.files[0]);
+    }
+  });
+  
+  // Alteração no input de arquivo
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFileSelect(e.target.files[0]);
+    }
+  });
+  
+  function handleFileSelect(file) {
+    if (!file) return;
+    
+    // Validar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('❌ A imagem deve ter no máximo 5MB');
+      return;
+    }
+    
+    // Validar tipo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      alert('❌ Formato não suportado. Use JPG, PNG ou PDF.');
+      return;
+    }
+    
+    // Mostrar preview
+    uploadArea.style.display = 'none';
+    uploadPreview.style.display = 'block';
+    
+    if (file.type.includes('image')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewContent.innerHTML = `
+          <img src="${e.target.result}" alt="Preview da escala" class="preview-image">
+          <div class="preview-info">
+            <p><strong>${file.name}</strong></p>
+            <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+          </div>
+        `;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // PDF
+      previewContent.innerHTML = `
+        <div class="preview-pdf">
+          <i class="fas fa-file-pdf"></i>
+          <div class="preview-info">
+            <p><strong>${file.name}</strong></p>
+            <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+            <p class="pdf-warning"><i class="fas fa-exclamation-triangle"></i> PDF será convertido para imagem no servidor</p>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  window.removerImagemEscala = function() {
+    uploadArea.style.display = 'flex';
+    uploadPreview.style.display = 'none';
+    fileInput.value = '';
+  };
+};
+
+// ========== UPLOAD DE IMAGEM DA ESCALA ==========
+window.uploadImagemEscala = async function() {
+  const motorista = document.getElementById('novaEscalaMotorista').value;
+  const matricula = document.getElementById('novaEscalaMatricula').value;
+  const periodo = document.getElementById('novaEscalaPeriodo').value;
+  const fileInput = document.getElementById('novaEscalaImagem');
+  
+  if (!motorista || !matricula) {
+    alert('Preencha nome do motorista e matrícula');
+    return;
+  }
+  
+  if (!fileInput.files.length) {
+    alert('Selecione uma imagem da escala');
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  
+  try {
+    showLoading('Enviando imagem da escala...');
+    
+    // Para este exemplo, vamos simular o upload
+    // Em um sistema real, você precisaria implementar o upload para Firebase Storage ou outro serviço
+    
+    // Simular URL de imagem (em produção, substitua pelo URL real do upload)
+    const imagemUrl = `https://via.placeholder.com/800x600/4CAF50/FFFFFF?text=Escala+${encodeURIComponent(motorista)}`;
+    
+    // Verificar se já existe escala para esta matrícula
+    const escalasExistentes = await getEscalas();
+    const escalaExistente = escalasExistentes.find(escala => 
+      escala.matricula && escala.matricula.toString() === matricula.toString()
+    );
+    
+    if (escalaExistente) {
+      // Atualizar escala existente
+      await updateEscala(escalaExistente.id, {
+        motorista: motorista,
+        matricula: matricula,
+        periodo: periodo,
+        imagemUrl: imagemUrl,
+        dataAtualizacao: new Date(),
+        timestamp: new Date()
+      });
+    } else {
+      // Criar nova escala
+      await addEscala({
+        motorista: motorista,
+        matricula: matricula,
+        periodo: periodo,
+        imagemUrl: imagemUrl,
+        dataAtualizacao: new Date(),
+        timestamp: new Date()
+      });
+    }
+    
+    mostrarNotificacao('✅ Escala Salva', 'Imagem da escala enviada com sucesso!');
+    
+    document.querySelector('.modal-back').remove();
+    gerenciarEscalas();
+    
+  } catch (erro) {
+    console.error('Erro ao salvar escala com imagem:', erro);
+    alert('❌ Erro ao salvar escala. Verifique sua conexão e tente novamente.');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== VISUALIZAR IMAGEM DA ESCALA (ADMIN) ==========
+window.visualizarEscalaImagem = async function(escalaId) {
+  try {
+    const escala = estadoApp.escalas.find(e => e.id === escalaId);
+    if (!escala) {
+      alert('Escala não encontrada');
+      return;
+    }
+    
+    if (!escala.imagemUrl) {
+      alert('Esta escala não possui imagem');
+      return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-back large';
+    modal.innerHTML = `
+      <div class="modal xlarge imagem-modal">
+        <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        <h3><i class="fas fa-image"></i> Escala de ${escala.motorista || 'Motorista'}</h3>
+        
+        <div class="imagem-info-header">
+          <div class="imagem-info">
+            <p><strong>Matrícula:</strong> ${escala.matricula || 'Não informada'}</p>
+            <p><strong>Período:</strong> ${escala.periodo || 'Não informado'}</p>
+            ${escala.dataAtualizacao ? 
+              `<p><strong>Atualizada em:</strong> ${new Date(escala.dataAtualizacao).toLocaleDateString('pt-BR')}</p>` : 
+              ''
+            }
+          </div>
+          <div class="imagem-actions">
+            <button class="btn btn-sm" onclick="downloadImagemEscala('${escala.imagemUrl}')">
+              <i class="fas fa-download"></i> Baixar
+            </button>
+            <button class="btn btn-sm secondary" onclick="editarEscalaImagem('${escala.id}')">
+              <i class="fas fa-edit"></i> Editar
+            </button>
+          </div>
+        </div>
+        
+        <div class="imagem-ampliada-container">
+          <img src="${escala.imagemUrl}" alt="Escala de ${escala.motorista}" class="imagem-ampliada">
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+            <i class="fas fa-times"></i> Fechar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+  } catch (erro) {
+    console.error('Erro ao visualizar imagem:', erro);
+    alert('Erro ao visualizar imagem da escala');
+  }
+};
+
+// ========== EDITAR ESCALA COM IMAGEM ==========
+window.editarEscalaImagem = async function(escalaId) {
+  try {
+    showLoading('Carregando escala...');
+    
+    const escala = estadoApp.escalas.find(e => e.id === escalaId);
+    if (!escala) {
+      alert('Escala não encontrada');
+      return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-back large';
+    modal.innerHTML = `
+      <div class="modal large">
+        <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        <h3><i class="fas fa-edit"></i> Editar Escala</h3>
+        
+        <div class="form-section">
+          <h4><i class="fas fa-user"></i> Dados do Motorista</h4>
+          <div class="form-group">
+            <label>Motorista *</label>
+            <input type="text" id="editarEscalaMotorista" class="form-input" 
+                   value="${escala.motorista || ''}" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Matrícula *</label>
+            <input type="text" id="editarEscalaMatricula" class="form-input" 
+                   value="${escala.matricula || ''}" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Período da Escala</label>
+            <input type="text" id="editarEscalaPeriodo" class="form-input" 
+                   value="${escala.periodo || ''}">
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h4><i class="fas fa-image"></i> Imagem da Escala</h4>
+          
+          ${escala.imagemUrl ? `
+            <div class="imagem-atual">
+              <h5><i class="fas fa-check-circle"></i> Imagem Atual</h5>
+              <div class="imagem-atual-preview">
+                <img src="${escala.imagemUrl}" alt="Imagem atual">
+                <button type="button" class="btn btn-sm" onclick="visualizarEscalaImagem('${escala.id}')">
+                  <i class="fas fa-eye"></i> Ver
+                </button>
+              </div>
+            </div>
+          ` : ''}
+          
+          <div class="upload-area" id="editarUploadArea">
+            <div class="upload-icon">
+              <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <div class="upload-text">
+              <h4>Clique para substituir a imagem</h4>
+              <p>ou arraste e solte uma nova imagem</p>
+              <p class="upload-info"><i class="fas fa-info-circle"></i> Deixe em branco para manter a imagem atual</p>
+            </div>
+            <input type="file" id="editarEscalaImagem" accept="image/*,.pdf" style="display: none;">
+          </div>
+          
+          <div class="upload-preview" id="editarUploadPreview" style="display: none;">
+            <div class="preview-header">
+              <h4><i class="fas fa-file-image"></i> Nova Imagem</h4>
+              <button type="button" class="btn btn-sm btn-danger" onclick="removerImagemEscalaEdicao()">
+                <i class="fas fa-trash"></i> Remover
+              </button>
+            </div>
+            <div class="preview-content" id="editarPreviewContent">
+              <!-- Preview será inserido aqui -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="salvarEdicaoEscalaImagem('${escalaId}')" id="btnSalvarEdicao">
+            <i class="fas fa-save"></i> Salvar Alterações
+          </button>
+          <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+    
+    // Configurar área de upload para edição
+    const uploadArea = document.getElementById('editarUploadArea');
+    const fileInput = document.getElementById('editarEscalaImagem');
+    const uploadPreview = document.getElementById('editarUploadPreview');
+    const previewContent = document.getElementById('editarPreviewContent');
+    
+    uploadArea.addEventListener('click', () => {
+      fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        const file = e.target.files[0];
+        
+        // Validar tamanho
+        if (file.size > 5 * 1024 * 1024) {
+          alert('❌ A imagem deve ter no máximo 5MB');
+          return;
+        }
+        
+        // Validar tipo
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        if (!validTypes.includes(file.type)) {
+          alert('❌ Formato não suportado. Use JPG, PNG ou PDF.');
+          return;
+        }
+        
+        // Mostrar preview
+        uploadArea.style.display = 'none';
+        uploadPreview.style.display = 'block';
+        
+        if (file.type.includes('image')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            previewContent.innerHTML = `
+              <img src="${e.target.result}" alt="Nova imagem" class="preview-image">
+              <div class="preview-info">
+                <p><strong>${file.name}</strong></p>
+                <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+            `;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          previewContent.innerHTML = `
+            <div class="preview-pdf">
+              <i class="fas fa-file-pdf"></i>
+              <div class="preview-info">
+                <p><strong>${file.name}</strong></p>
+                <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+            </div>
+          `;
+        }
+      }
+    });
+    
+    window.removerImagemEscalaEdicao = function() {
+      uploadArea.style.display = 'flex';
+      uploadPreview.style.display = 'none';
+      fileInput.value = '';
+    };
+    
+  } catch (erro) {
+    console.error('Erro ao carregar escala:', erro);
+    alert('❌ Erro ao carregar escala');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== SALVAR EDIÇÃO DA ESCALA COM IMAGEM ==========
+window.salvarEdicaoEscalaImagem = async function(escalaId) {
+  const motorista = document.getElementById('editarEscalaMotorista').value;
+  const matricula = document.getElementById('editarEscalaMatricula').value;
+  const periodo = document.getElementById('editarEscalaPeriodo').value;
+  const fileInput = document.getElementById('editarEscalaImagem');
+  
+  if (!motorista || !matricula) {
+    alert('Preencha nome do motorista e matrícula');
+    return;
+  }
+  
+  try {
+    showLoading('Salvando alterações...');
+    
+    const escala = estadoApp.escalas.find(e => e.id === escalaId);
+    if (!escala) {
+      throw new Error('Escala não encontrada');
+    }
+    
+    let imagemUrl = escala.imagemUrl;
+    
+    // Se houver nova imagem, processar upload
+    if (fileInput.files.length) {
+      // Simular upload (em produção, implemente o upload real)
+      const file = fileInput.files[0];
+      imagemUrl = `https://via.placeholder.com/800x600/2196F3/FFFFFF?text=Escala+Atualizada+${encodeURIComponent(motorista)}`;
+    }
+    
+    await updateEscala(escalaId, {
+      motorista: motorista,
+      matricula: matricula,
+      periodo: periodo,
+      imagemUrl: imagemUrl,
+      dataAtualizacao: new Date(),
+      timestamp: new Date()
+    });
+    
+    mostrarNotificacao('✅ Escala Atualizada', 'Alterações salvas com sucesso!');
+    
+    document.querySelector('.modal-back').remove();
+    gerenciarEscalas();
+    
+  } catch (erro) {
+    console.error('Erro ao salvar escala:', erro);
+    alert('❌ Erro ao salvar escala');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== EXPORTAR LISTA DE ESCALAS ==========
+window.exportarEscalasImagem = function() {
+  if (estadoApp.escalas.length === 0) {
+    alert('Não há escalas para exportar');
+    return;
+  }
+  
+  let csvContent = "Motorista;Matrícula;Período;Tem Imagem;Última Atualização\n";
+  
+  estadoApp.escalas.forEach(escala => {
+    csvContent += `${escala.motorista || ''};${escala.matricula || ''};${escala.periodo || ''};${escala.imagemUrl ? 'Sim' : 'Não'};${escala.dataAtualizacao ? new Date(escala.dataAtualizacao).toLocaleDateString('pt-BR') : ''}\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `escalas_imagem_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  mostrarNotificacao('✅ Lista Exportada', 'Download iniciado!');
+};
+
+// ========== FUNÇÕES DE EMERGÊNCIA (ADMIN) ==========
+window.resolverEmergenciaAdmin = async function(emergenciaId) {
+  if (!confirm('Marcar esta emergência como resolvida?')) {
+    return;
+  }
+  
+  try {
+    showLoading('Resolvendo emergência...');
+    
+    await resolverEmergencia(emergenciaId);
+    
+    mostrarNotificacao('✅ Emergência Resolvida', 'A emergência foi marcada como resolvida.');
+    
+    const emergenciaElement = document.querySelector(`[onclick*="${emergenciaId}"]`)?.closest('.emergencia-card');
+    if (emergenciaElement) {
+      emergenciaElement.remove();
+    }
+    
+  } catch (erro) {
+    console.error('Erro ao resolver emergência:', erro);
+    alert('❌ Erro ao resolver emergência');
+  } finally {
+    hideLoading();
+  }
+};
+
+window.contatarMotoristaAdmin = function(matricula) {
+  const mensagem = encodeURIComponent(`Olá! Estamos entrando em contato referente a uma emergência registrada.`);
+  const url = `https://wa.me/55${matricula}?text=${mensagem}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+window.verLocalizacaoEmergencia = async function(emergenciaId) {
+  try {
+    const emergencia = estadoApp.emergenciasAtivas?.find(e => e.id === emergenciaId);
+    if (emergencia) {
+      const url = `https://www.google.com/maps?q=${emergencia.latitude},${emergencia.longitude}&z=15`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('Localização da emergência não disponível');
+    }
+  } catch (erro) {
+    console.error('Erro ao abrir localização:', erro);
+    alert('Erro ao abrir localização');
+  }
+};
+
+// ========== FUNÇÕES DE FEEDBACK (ADMIN) ==========
+window.resolverFeedbackAdmin = async function(feedbackId) {
+  if (!confirm('Marcar este feedback como resolvido?')) {
+    return;
+  }
+  
+  try {
+    showLoading('Resolvendo feedback...');
+    
+    await resolverFeedback(feedbackId);
+    
+    mostrarNotificacao('✅ Feedback Resolvido', 'O feedback foi marcado como resolvido.');
+    
+    const feedbackElement = document.querySelector(`[onclick*="${feedbackId}"]`)?.closest('.feedback-card');
+    if (feedbackElement) {
+      feedbackElement.remove();
+    }
+    
+  } catch (erro) {
+    console.error('Erro ao resolver feedback:', erro);
+    alert('❌ Erro ao resolver feedback');
+  } finally {
+    hideLoading();
+  }
+};
+
+window.responderFeedbackAdmin = function(feedbackId) {
+  const resposta = prompt('Digite sua resposta para este feedback:');
+  if (!resposta) return;
+  
+  try {
+    showLoading('Enviando resposta...');
+    
+    responderFeedback(feedbackId, resposta);
+    
+    mostrarNotificacao('✅ Resposta Enviada', 'Resposta enviada com sucesso!');
+    
+  } catch (erro) {
+    console.error('Erro ao responder feedback:', erro);
+    alert('❌ Erro ao responder feedback');
+  } finally {
+    hideLoading();
+  }
+};
+
+// ========== RELATÓRIOS ==========
+async function carregarRelatorios() {
+  try {
+    showLoading('Carregando relatórios...');
+    
+    const estatisticas = await getEstatisticasDashboard();
+    estadoApp.estatisticas = estatisticas;
+    
+    const q = query(collection(db, 'rotas_em_andamento'), 
+      where("ativo", "==", true),
+      orderBy("timestamp", "desc")
+    );
+    const snapshot = await getDocs(q);
+    const rotasAtivas = snapshot.docs.map(d => d.data());
+    
+    const frequenciaRotas = {};
+    rotasAtivas.forEach(rota => {
+      if (rota.rota) {
+        frequenciaRotas[rota.rota] = (frequenciaRotas[rota.rota] || 0) + 1;
+      }
+    });
+    
+    const rotasFrequentes = Object.entries(frequenciaRotas)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    
+    const container = document.getElementById('relatoriosContainer');
+    if (container) {
+      container.innerHTML = `
+        <div class="dashboard-grid">
+          <div class="dashboard-card large">
+            <h3><i class="fas fa-chart-pie"></i> Estatísticas Gerais</h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-number">${estatisticas.totalRotasAtivas}</div>
+                <div class="stat-label">Rotas Ativas</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-number">${estadoApp.onlineUsers.length}</div>
+                <div class="stat-label">Usuários Online</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-number">${estatisticas.totalEmergencias}</div>
+                <div class="stat-label">Emergências</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-number">${estatisticas.totalFeedbacks}</div>
+                <div class="stat-label">Feedbacks</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="dashboard-card">
+            <h3><i class="fas fa-route"></i> Rotas por Tipo</h3>
+            <div class="chart-container">
+              <div class="chart-bar" style="height: ${(estatisticas.rotasPorTipo?.operacional || 0) * 20}px">
+                <span>Operacional: ${estatisticas.rotasPorTipo?.operacional || 0}</span>
+              </div>
+              <div class="chart-bar" style="height: ${(estatisticas.rotasPorTipo?.adm || 0) * 20}px">
+                <span>ADM: ${estatisticas.rotasPorTipo?.adm || 0}</span>
+              </div>
+              <div class="chart-bar" style="height: ${(estatisticas.rotasPorTipo?.retorno || 0) * 20}px">
+                <span>Retorno: ${estatisticas.rotasPorTipo?.retorno || 0}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="dashboard-card">
+            <h3><i class="fas fa-bus"></i> Rotas Mais Frequentes</h3>
+            <div class="rotas-frequentes">
+              ${rotasFrequentes.length > 0 ? 
+                rotasFrequentes.map(([rota, count]) => `
+                  <div class="rota-frequente-item">
+                    <span>${rota}</span>
+                    <span class="rota-count">${count} viagens</span>
+                  </div>
+                `).join('') : 
+                '<p class="empty-state">Nenhuma rota registrada</p>'
+              }
+            </div>
+          </div>
+          
+          <div class="dashboard-card">
+            <h3><i class="fas fa-users"></i> Usuários Online</h3>
+            <div id="onlineUsersList">
+              <div class="online-user-list">
+                ${estadoApp.onlineUsers.length > 0 ? 
+                  estadoApp.onlineUsers.map(user => `
+                    <div class="online-user-item">
+                      <span class="online-dot"></span>
+                      <div class="user-info">
+                        <strong>${user.motorista}</strong>
+                        <small>${user.onibus} • ${user.rota}</small>
+                      </div>
+                      <small>${user.ultimaAtualizacao ? new Date(user.ultimaAtualizacao.toDate()).toLocaleTimeString() : ''}</small>
+                    </div>
+                  `).join('') : 
+                  '<div class="empty-state"><p>Nenhum usuário online</p></div>'
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="relatorios-actions">
+          <button class="btn" onclick="exportarRelatorios()">
+            <i class="fas fa-file-export"></i> Exportar Relatórios
+          </button>
+          <button class="btn secondary" onclick="atualizarRelatorios()">
+            <i class="fas fa-sync"></i> Atualizar
+          </button>
+        </div>
+      `;
+    }
+    
+  } catch (erro) {
+    console.error('Erro ao carregar relatórios:', erro);
+    
+    const container = document.getElementById('relatoriosContainer');
+    if (container) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-chart-line"></i>
+          <h4>Erro ao carregar relatórios</h4>
+          <p>Tente novamente mais tarde.</p>
+        </div>
+      `;
+    }
+  } finally {
+    hideLoading();
+  }
+}
+
+window.atualizarRelatorios = function() {
+  carregarRelatorios();
+};
+
+window.exportarRelatorios = function() {
+  if (!estadoApp.estatisticas) {
+    alert('Nenhum dado disponível para exportar');
+    return;
+  }
+  
+  let csvContent = "Relatório AC Transporte\n";
+  csvContent += `Data: ${new Date().toLocaleDateString()}\n\n`;
+  csvContent += "Métrica,Valor\n";
+  csvContent += `Rotas Ativas,${estadoApp.estatisticas.totalRotasAtivas}\n`;
+  csvContent += `Usuários Online,${estadoApp.onlineUsers.length}\n`;
+  csvContent += `Emergências Pendentes,${estadoApp.estatisticas.totalEmergencias}\n`;
+  csvContent += `Feedbacks Pendentes,${estadoApp.estatisticas.totalFeedbacks}\n\n`;
+  csvContent += "Rotas por Tipo\n";
+  csvContent += `Operacional,${estadoApp.estatisticas.rotasPorTipo?.operacional || 0}\n`;
+  csvContent += `ADM,${estadoApp.estatisticas.rotasPorTipo?.adm || 0}\n`;
+  csvContent += `Retorno,${estadoApp.estatisticas.rotasPorTipo?.retorno || 0}\n`;
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `relatorio_ac_transporte_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  mostrarNotificacao('✅ Relatório Exportado', 'Download iniciado!');
+};
+
+// ========== FUNÇÕES DE TEMAS E PWA ==========
 function initDarkMode() {
   const darkToggle = document.getElementById('darkToggle');
   if (!darkToggle) return;
@@ -516,16 +3218,13 @@ function initDarkMode() {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
   const savedPreference = localStorage.getItem('ac_dark');
   
-  // Aplicar tema
   if (savedPreference === '1' || (!savedPreference && prefersDark.matches)) {
     document.body.classList.add('dark');
     updateDarkModeIcon(true);
   }
   
-  // Configurar alternância
   darkToggle.addEventListener('click', toggleDarkMode);
   
-  // Ouvir mudanças no sistema
   prefersDark.addEventListener('change', (e) => {
     if (!localStorage.getItem('ac_dark')) {
       if (e.matches) {
@@ -544,24 +3243,23 @@ function toggleDarkMode() {
   localStorage.setItem('ac_dark', isDark ? '1' : '0');
   updateDarkModeIcon(isDark);
   
-  // Feedback tátil
   const darkToggle = document.getElementById('darkToggle');
-  darkToggle.style.transform = 'scale(0.95)';
-  setTimeout(() => {
-    darkToggle.style.transform = '';
-  }, 150);
+  if (darkToggle) {
+    darkToggle.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      darkToggle.style.transform = '';
+    }, 150);
+  }
 }
 
 function updateDarkModeIcon(isDark) {
   const darkToggle = document.getElementById('darkToggle');
   if (!darkToggle) return;
   
-  darkToggle.textContent = isDark ? '☀️' : '🌙';
+  darkToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
   darkToggle.setAttribute('title', isDark ? 'Alternar para modo claro' : 'Alternar para modo escuro');
-  darkToggle.setAttribute('aria-label', isDark ? 'Modo escuro ativo - clique para modo claro' : 'Modo claro ativo - clique para modo escuro');
 }
 
-// ========== FUNÇÕES PWA ==========
 function initPWA() {
   const installBtn = document.getElementById('installBtn');
   if (!installBtn) return;
@@ -572,7 +3270,7 @@ function initPWA() {
     e.preventDefault();
     deferredPrompt = e;
     installBtn.style.display = 'flex';
-    console.log('PWA pode ser instalado');
+    console.log('📱 PWA pode ser instalado');
   });
   
   installBtn.addEventListener('click', async () => {
@@ -585,17 +3283,17 @@ function initPWA() {
     const choiceResult = await deferredPrompt.userChoice;
     
     if (choiceResult.outcome === 'accepted') {
-      console.log('Usuário aceitou a instalação');
+      console.log('✅ Usuário aceitou a instalação');
       installBtn.style.display = 'none';
     } else {
-      console.log('Usuário recusou a instalação');
+      console.log('❌ Usuário recusou a instalação');
     }
     
     deferredPrompt = null;
   });
   
   window.addEventListener('appinstalled', () => {
-    console.log('PWA instalado com sucesso');
+    console.log('🎉 PWA instalado com sucesso');
     installBtn.style.display = 'none';
   });
   
@@ -604,93 +3302,7 @@ function initPWA() {
   }
 }
 
-// ========== NAVEGAÇÃO ENTRE TELAS ==========
-window.mostrarTela = function(id) {
-  console.log('Mostrando tela:', id);
-  
-  // Esconder todas as telas
-  document.querySelectorAll('.tela').forEach(tela => {
-    tela.classList.add('hidden');
-    tela.classList.remove('ativa');
-  });
-  
-  // Mostrar tela alvo
-  const alvo = document.getElementById(id);
-  if (!alvo) {
-    console.error('Tela não encontrada:', id);
-    return;
-  }
-  
-  alvo.classList.remove('hidden');
-  alvo.classList.add('ativa');
-  
-  // Rolagem para o topo
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  
-  // Iniciar monitoramento se necessário
-  if (id === 'tela-passageiro') {
-    iniciarMonitoramentoPassageiro();
-  } else if (id === 'tela-admin-dashboard') {
-    iniciarMonitoramentoAdmin();
-  }
-};
-
-window.entrarNoPortal = function () {
-  mostrarTela('telaEscolhaPerfil');
-};
-
-window.selecionarPerfil = function (perfil) {
-  console.log('Perfil selecionado:', perfil);
-  estadoApp.perfil = perfil;
-  localStorage.setItem('perfil', perfil);
-
-  if (perfil === 'motorista') mostrarTela('tela-motorista-login');
-  if (perfil === 'passageiro') mostrarTela('tela-passageiro');
-  if (perfil === 'admin') mostrarTela('tela-admin-login');
-};
-
-// ========== FUNÇÕES DE MODAL ==========
-function openModal(modalType) {
-  const modalId = modalType === 'avisosModal' ? 'avisosModalBack' : 'ajudaModalBack';
-  const modal = document.getElementById(modalId);
-  
-  if (modal) {
-    modal.style.display = 'flex';
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    
-    // Focar no primeiro elemento focável
-    setTimeout(() => {
-      const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      firstFocusable?.focus();
-    }, 100);
-    
-    console.log(`Modal aberto: ${modalType}`);
-  }
-}
-
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  
-  if (modal) {
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = 'auto';
-    console.log(`Modal fechado: ${modalId}`);
-  }
-}
-
-function closeAllModals() {
-  document.querySelectorAll('.modal-back').forEach(modal => {
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  });
-  
-  document.body.style.overflow = 'auto';
-  console.log('Todos os modais fechados');
-}
-
-// ========== MONITORAMENTO DE CONEXÃO ==========
+// ========== FUNÇÕES DE CONEXÃO ==========
 function initConnectionMonitor() {
   window.addEventListener('online', updateOnlineStatus);
   window.addEventListener('offline', updateOnlineStatus);
@@ -704,7 +3316,7 @@ function updateOnlineStatus() {
   const offlineBanner = document.getElementById('offlineBanner');
   
   if (statusElement) {
-    statusElement.textContent = estadoApp.isOnline ? '●' : '○';
+    statusElement.innerHTML = estadoApp.isOnline ? '<i class="fas fa-circle"></i>' : '<i class="fas fa-circle"></i>';
     statusElement.style.color = estadoApp.isOnline ? '#4CAF50' : '#FF5722';
     statusElement.title = estadoApp.isOnline ? 'Online' : 'Offline';
   }
@@ -714,11 +3326,58 @@ function updateOnlineStatus() {
   }
   
   if (!estadoApp.isOnline) {
-    console.warn('Aplicativo offline');
+    console.warn('📶 Aplicativo offline');
+    mostrarNotificacao('📶 Modo Offline', 'Algumas funcionalidades podem não estar disponíveis');
   }
 }
 
-// ========== LOADING STATES ==========
+// ========== AVISOS ==========
+function initAvisos() {
+  const avisosBtn = document.getElementById('avisosBtn');
+  if (avisosBtn) {
+    avisosBtn.addEventListener('click', mostrarAvisos);
+  }
+}
+
+window.mostrarAvisos = function() {
+  const avisos = estadoApp.avisosAtivos || [];
+  
+  if (avisos.length === 0) {
+    alert('📭 Nenhum aviso no momento');
+    return;
+  }
+  
+  const avisosHTML = avisos.filter(aviso => aviso.ativo).map(aviso => `
+    <div class="aviso-item">
+      <div class="aviso-header">
+        <strong>${aviso.titulo}</strong>
+        <small>${aviso.timestamp ? new Date(aviso.timestamp.toDate()).toLocaleDateString() : ''}</small>
+      </div>
+      <p>${aviso.mensagem}</p>
+      <small class="aviso-destino">Para: ${aviso.destino || 'Todos'}</small>
+    </div>
+  `).join('');
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-back';
+  modal.innerHTML = `
+    <div class="modal">
+      <button class="close" onclick="this.parentElement.parentElement.remove()">✕</button>
+      <h3>📢 Avisos e Comunicados</h3>
+      <div class="avisos-list">
+        ${avisosHTML}
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn" onclick="this.parentElement.parentElement.remove()">Fechar</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  modal.style.display = 'flex';
+};
+
+// ========== FUNÇÕES DE UTILIDADE ==========
 function showLoading(message = 'Carregando...') {
   const overlay = document.getElementById('loadingOverlay');
   const text = document.getElementById('loadingText');
@@ -732,85 +3391,26 @@ function hideLoading() {
   if (overlay) overlay.style.display = 'none';
 }
 
-// ========== EVENT LISTENERS ==========
 function initEventListeners() {
-  // Fechar modais com ESC
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeAllModals();
     }
   });
   
-  // Fechar modal clicando fora
   document.querySelectorAll('.modal-back').forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
-        closeModal(modal.id);
+        modal.remove();
       }
     });
   });
-  
-  // Adicionar eventos de teclado para elementos clicáveis
-  document.querySelectorAll('[onclick], [role="button"]').forEach(element => {
-    element.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && element.getAttribute('tabindex') !== '-1') {
-        e.preventDefault();
-        element.click();
-      }
-    });
-  });
-  
-  // Auto-focus no input de matrícula
-  document.getElementById('matriculaMotorista')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      confirmarMatriculaMotorista();
-    }
-  });
 }
 
-// ========== ACESSIBILIDADE ==========
-function initAccessibility() {
-  // Adicionar roles e labels
-  document.querySelectorAll('.btn, [role="button"]').forEach(btn => {
-    if (!btn.getAttribute('aria-label') && btn.textContent) {
-      const label = btn.textContent.trim().replace(/\s+/g, ' ');
-      btn.setAttribute('aria-label', label);
-    }
+function closeAllModals() {
+  document.querySelectorAll('.modal-back').forEach(modal => {
+    modal.remove();
   });
-  
-  // Anúncios de mudança de tela para leitores de tela
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        const tela = mutation.target;
-        if (tela.classList.contains('ativa')) {
-          const h2 = tela.querySelector('h2');
-          if (h2) {
-            announceScreenChange(h2.textContent);
-          }
-        }
-      }
-    });
-  });
-  
-  document.querySelectorAll('.tela').forEach(tela => {
-    observer.observe(tela, { attributes: true, attributeFilter: ['class'] });
-  });
-}
-
-function announceScreenChange(message) {
-  const announcer = document.getElementById('liveAnnouncer') || createAnnouncer();
-  announcer.textContent = message;
-}
-
-function createAnnouncer() {
-  const announcer = document.createElement('div');
-  announcer.id = 'liveAnnouncer';
-  announcer.setAttribute('aria-live', 'assertive');
-  announcer.setAttribute('aria-atomic', 'true');
-  announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;';
-  document.body.appendChild(announcer);
-  return announcer;
 }
 
 // ========== SERVICE WORKER ==========
@@ -818,27 +3418,48 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js')
       .then(registration => {
-        console.log('ServiceWorker registrado:', registration.scope);
+        console.log('✅ ServiceWorker registrado:', registration.scope);
       })
       .catch(error => {
-        console.log('Falha ao registrar ServiceWorker:', error);
+        console.log('❌ Falha ao registrar ServiceWorker:', error);
       });
   });
 }
 
-// ========== EXPORTAR FUNÇÕES GLOBAIS ==========
-// Exportar funções necessárias no escopo global
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.mostrarTela = mostrarTela;
-window.entrarNoPortal = entrarNoPortal;
-window.selecionarPerfil = selecionarPerfil;
-window.confirmarMatriculaMotorista = confirmarMatriculaMotorista;
-window.iniciarRota = iniciarRota;
-window.pararRota = pararRota;
-window.logout = logout;
-window.loginAdmin = loginAdmin;
-window.searchRoutes = searchRoutes;
-window.filterRoutes = filterRoutes;
-window.abrirMapaPassageiro = abrirMapaPassageiro;
-window.abrirMapaAdmin = abrirMapaAdmin;
+// ========== SUPPORT - WHATSAPP ==========
+window.abrirSuporteWhatsApp = function() {
+  const telefone = '5593992059914';
+  const mensagem = encodeURIComponent('Olá! Preciso de suporte no Portal de Transporte da AC Parceria.');
+  const url = `https://wa.me/${telefone}?text=${mensagem}`;
+  
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+// ========== FUNÇÕES AUXILIARES ADICIONAIS ==========
+window.verFormsControle = function() {
+  window.open('https://forms.gle/UDniKxPqcMKGUhFQA', '_blank');
+};
+
+window.verDetalhesRota = function(matricula) {
+  alert(`Detalhes da rota para matrícula: ${matricula}\n\nEm desenvolvimento...`);
+};
+
+window.enviarNotificacaoMotorista = function(matricula) {
+  const mensagem = prompt('Digite a mensagem para o motorista:');
+  if (mensagem) {
+    alert(`Notificação enviada para o motorista ${matricula}:\n\n${mensagem}`);
+  }
+};
+
+// ========== FUNÇÕES PARA CARREGAR ESCALAS ==========
+async function carregarEscalas() {
+  try {
+    const escalas = await getEscalas();
+    estadoApp.escalas = escalas;
+    console.log('Escalas carregadas:', escalas.length);
+  } catch (erro) {
+    console.error('Erro ao carregar escalas:', erro);
+  }
+}
+
+console.log('🚀 app.js carregado com sucesso!');
