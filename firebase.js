@@ -1,4 +1,4 @@
-// firebase.js - CONFIGURAÇÃO COMPLETA ATUALIZADA COM FUNÇÕES DE ESCALA
+// firebase.js - CONFIGURAÇÃO COMPLETA SEM LOGIN ANÔNIMO
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
 import { 
@@ -22,9 +22,7 @@ import {
 import { 
   getAuth, 
   signInWithEmailAndPassword,
-  signOut,
-  signInAnonymously,
-  onAuthStateChanged
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import { 
@@ -60,22 +58,6 @@ async function loginEmailSenha(email, senha) {
   } catch (error) {
     throw new Error(getErrorMessage(error.code));
   }
-}
-
-async function loginAnonimo() {
-  try {
-    const userCredential = await signInAnonymously(auth);
-    return userCredential.user;
-  } catch (error) {
-    console.error('Erro login anônimo:', error);
-    throw error;
-  }
-}
-
-function monitorarAutenticacao(callback) {
-  return onAuthStateChanged(auth, (user) => {
-    callback(user);
-  });
 }
 
 function getErrorMessage(errorCode) {
@@ -138,12 +120,17 @@ async function registrarAviso(dados) {
 
 // ================= AVISOS - CRUD completo =================
 async function getAvisos() {
-  const q = query(collection(db, 'avisos'), 
-    where("ativo", "==", true),
-    orderBy('timestamp', 'desc')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const q = query(collection(db, 'avisos'), 
+      where("ativo", "==", true),
+      orderBy('timestamp', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error('Erro ao buscar avisos:', error);
+    return [];
+  }
 }
 
 async function updateAviso(avisoId, dados) {
@@ -299,75 +286,99 @@ async function deletarImagemEscala(urlImagem) {
 
 // ================= MONITORAMENTO =================
 function monitorarRotas(callback) {
-  // Primeiro faz login anônimo para acessar dados
-  loginAnonimo().then(() => {
+  try {
     const q = query(collection(db, 'rotas_em_andamento'), 
       where("ativo", "==", true)
     );
     
-    return onSnapshot(q, snapshot => {
-      const rotas = [];
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        if (data.ativo !== false) {
-          rotas.push({ id: docSnap.id, ...data });
-        }
-      });
-      callback(rotas);
-    }, (error) => {
-      console.error('Erro monitorar rotas:', error);
-    });
-  }).catch(error => {
-    console.error('Erro login anônimo para monitoramento:', error);
-  });
+    return onSnapshot(q, 
+      (snapshot) => {
+        const rotas = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.ativo !== false) {
+            rotas.push({ id: docSnap.id, ...data });
+          }
+        });
+        callback(rotas);
+      }, 
+      (error) => {
+        console.error('Erro monitorar rotas:', error);
+        // Tentar reconectar após 5 segundos
+        setTimeout(() => monitorarRotas(callback), 5000);
+      }
+    );
+  } catch (error) {
+    console.error('Erro ao configurar monitoramento de rotas:', error);
+  }
 }
 
 function monitorarEmergencias(callback) {
-  loginAnonimo().then(() => {
+  try {
     const q = query(collection(db, 'emergencias'), 
       where("status", "==", "pendente"),
       orderBy("timestamp", "desc")
     );
     
-    return onSnapshot(q, snapshot => {
-      const dados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      callback(dados);
-    });
-  });
+    return onSnapshot(q, 
+      (snapshot) => {
+        const dados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback(dados);
+      },
+      (error) => {
+        console.error('Erro monitorar emergências:', error);
+      }
+    );
+  } catch (error) {
+    console.error('Erro ao configurar monitoramento de emergências:', error);
+  }
 }
 
 function monitorarFeedbacks(callback) {
-  loginAnonimo().then(() => {
+  try {
     const q = query(collection(db, 'feedbacks'), 
       where("status", "==", "pendente"),
       orderBy("timestamp", "desc")
     );
     
-    return onSnapshot(q, snapshot => {
-      const dados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      callback(dados);
-    });
-  });
+    return onSnapshot(q, 
+      (snapshot) => {
+        const dados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback(dados);
+      },
+      (error) => {
+        console.error('Erro monitorar feedbacks:', error);
+      }
+    );
+  } catch (error) {
+    console.error('Erro ao configurar monitoramento de feedbacks:', error);
+  }
 }
 
 function monitorarAvisos(callback) {
-  loginAnonimo().then(() => {
+  try {
     const q = query(collection(db, 'avisos'), 
       where("ativo", "==", true),
       orderBy("timestamp", "desc")
     );
     
-    return onSnapshot(q, snapshot => {
-      const dados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      callback(dados);
-    });
-  });
+    return onSnapshot(q, 
+      (snapshot) => {
+        const dados = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        callback(dados);
+      },
+      (error) => {
+        console.error('Erro monitorar avisos:', error);
+      }
+    );
+  } catch (error) {
+    console.error('Erro ao configurar monitoramento de avisos:', error);
+  }
 }
 
 // ================= RELATÓRIOS =================
 async function getRelatorios() {
   try {
-    // Verificar se a coleção existe
     const snapshot = await getDocs(collection(db, 'relatorios'));
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (error) {
@@ -406,9 +417,6 @@ async function responderFeedback(feedbackId, resposta) {
 // ================= DASHBOARD =================
 async function getEstatisticasDashboard() {
   try {
-    // Fazer login anônimo primeiro
-    await loginAnonimo();
-    
     const [rotasSnapshot, emergenciasSnapshot, feedbacksSnapshot] = await Promise.all([
       getDocs(query(collection(db, 'rotas_em_andamento'), where('ativo', '==', true))),
       getDocs(query(collection(db, 'emergencias'), where('status', '==', 'pendente'))),
@@ -469,15 +477,16 @@ async function getMotoristasAtivos() {
   }
 }
 
-// ================= INICIALIZAÇÃO =================
-async function inicializarFirebase() {
+// ================= VERIFICAÇÃO DE CONEXÃO =================
+async function verificarConexaoFirestore() {
   try {
-    // Fazer login anônimo para acessar dados
-    await loginAnonimo();
-    console.log('✅ Firebase inicializado com login anônimo');
+    // Tentar uma leitura simples para verificar conexão
+    const testeRef = collection(db, '_check_connection');
+    const snapshot = await getDocs(testeRef);
+    console.log('✅ Conexão com Firestore estabelecida');
     return true;
   } catch (error) {
-    console.error('❌ Erro ao inicializar Firebase:', error);
+    console.error('❌ Erro na conexão com Firestore:', error);
     return false;
   }
 }
@@ -506,8 +515,6 @@ export {
   // Autenticação
   signInWithEmailAndPassword,
   signOut,
-  loginAnonimo,
-  monitorarAutenticacao,
   
   // Colaboradores
   getColaborador,
@@ -558,6 +565,6 @@ export {
   getRotasPorTipo,
   getMotoristasAtivos,
   
-  // Inicialização
-  inicializarFirebase
+  // Conexão
+  verificarConexaoFirestore
 };
